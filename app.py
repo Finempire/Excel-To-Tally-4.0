@@ -50,7 +50,7 @@ def load_css():
         
         /* --- Financial Dashboard Header --- */
         .dashboard-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #001f3f 0%, #003366 100%);
             padding: 2.5rem;
             border-radius: 15px;
             color: white;
@@ -144,7 +144,7 @@ def load_css():
         .feature-icon {
             font-size: 3.2rem;
             margin-bottom: 1.2rem;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #001f3f, #003366);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -181,13 +181,13 @@ def load_css():
         .nav-card:hover {
             transform: translateY(-3px);
             box-shadow: 0 6px 20px rgba(0,0,0,0.12);
-            border-color: #667eea;
+            border-color: #001f3f;
         }
-        
+
         .nav-icon {
             font-size: 2.8rem;
             margin-bottom: 1.2rem;
-            color: #667eea;
+            color: #001f3f;
         }
         
         .nav-title {
@@ -219,7 +219,7 @@ def load_css():
         .step-number {
             width: 45px;
             height: 45px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #001f3f, #003366);
             color: white;
             border-radius: 50%;
             display: flex;
@@ -252,14 +252,14 @@ def load_css():
         }
         
         .primary-button {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #001f3f, #003366);
             color: white;
             border: none;
         }
-        
+
         .primary-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 6px 20px rgba(0, 31, 63, 0.4);
         }
         
         /* --- Data Upload Cards --- */
@@ -274,13 +274,13 @@ def load_css():
         }
         
         .upload-card:hover {
-            border-color: #667eea;
-            background: #f8f9ff;
+            border-color: #001f3f;
+            background: #f0f4f8;
         }
-        
+
         .upload-icon {
             font-size: 3.5rem;
-            color: #667eea;
+            color: #001f3f;
             margin-bottom: 1.2rem;
         }
         
@@ -320,7 +320,7 @@ def load_css():
         
         .progress-bar {
             height: 100%;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #001f3f, #003366);
             border-radius: 10px;
             transition: width 0.3s ease;
         }
@@ -405,9 +405,9 @@ def load_css():
         
         /* --- Color Scheme --- */
         :root {
-            --primary-color: #667eea;
-            --secondary-color: #764ba2;
-            --accent-color: #f093fb;
+            --primary-color: #001f3f;
+            --secondary-color: #003366;
+            --accent-color: #ffffff;
             --success-color: #2e7d32;
             --warning-color: #ef6c00;
             --error-color: #c62828;
@@ -436,7 +436,7 @@ def load_css():
         .login-logo {
             font-size: 3rem;
             margin-bottom: 1.5rem;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #001f3f, #003366);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -481,8 +481,8 @@ def load_css():
         }
         
         .sso-button:hover {
-            border-color: #667eea;
-            background: #f8f9ff;
+            border-color: #001f3f;
+            background: #f0f4f8;
         }
         
         .divider {
@@ -524,7 +524,7 @@ def load_css():
         }
         
         .footer-link:hover {
-            color: #667eea;
+            color: #001f3f;
         }
         
         .security-features {
@@ -1000,17 +1000,17 @@ class EnhancedLedgerMapper:
     def initialize_model(self):
         """Initialize the sentence transformer model"""
         if not SENTENCE_TRANSFORMERS_AVAILABLE:
-            st.warning("❌ Sentence Transformers not available. Please install: pip install sentence-transformers")
+            st.warning("Sentence Transformers not available. Please install: pip install sentence-transformers")
             return False
             
         try:
-            with st.spinner("🔄 Loading AI model for semantic matching..."):
+            with st.spinner("Loading AI model for semantic matching..."):
                 self.model = SentenceTransformer('all-MiniLM-L6-v2')
                 self.initialized = True
-                st.success("✅ Semantic AI model loaded successfully!")
+                st.success("Semantic AI model loaded successfully!")
                 return True
         except Exception as e:
-            st.error(f"❌ Failed to load AI model: {e}")
+            st.error(f"Failed to load AI model: {e}")
             return False
     
     def extract_name_from_end(self, narration):
@@ -1769,7 +1769,6 @@ def create_bank_tally_xml(df, bank_ledger, company_name):
 # --- 6. Page Configuration ---
 st.set_page_config(
     page_title="Xml2Tally - Financial Automation Platform",
-    page_icon="📊",
     layout="wide",  # Changed to "wide" for more space
     initial_sidebar_state="expanded"  # Changed to "expanded" - THIS IS THE KEY CHANGE
 )
@@ -1809,7 +1808,6 @@ def render_login_page():
     st.markdown("""
         <div class="login-container">
             <div class="login-header">
-                <div class="login-logo">🔐</div>
                 <div class="login-title">Welcome Back</div>
                 <div class="login-subtitle">Sign in to your Financial Automation Platform</div>
             </div>
@@ -1822,33 +1820,33 @@ def render_login_page():
         with st.form("login_form"):
             st.subheader("Login to Your Account")
             
-            email = st.text_input("📧 Email Address", placeholder="Enter your email")
-            password = st.text_input("🔒 Password", type="password", placeholder="Enter your password")
+            email = st.text_input("Email Address", placeholder="Enter your email")
+            password = st.text_input("Password", type="password", placeholder="Enter your password")
             
             col1, col2 = st.columns(2)
             with col1:
-                login_button = st.form_submit_button("🚀 Sign In", use_container_width=True)
+                login_button = st.form_submit_button("Sign In", use_container_width=True)
             with col2:
-                if st.form_submit_button("🆕 Create Account", use_container_width=True, type="secondary"):
+                if st.form_submit_button("Create Account", use_container_width=True, type="secondary"):
                     st.session_state.current_view = "signup"
                     st.rerun()
             
             if login_button:
                 if not email or not password:
-                    st.error("❌ Please enter both email and password")
+                    st.error("Please enter both email and password")
                 else:
                     status = check_user_status(email, password)
                     if status == "INVALID":
-                        st.error("❌ Invalid email or password")
+                        st.error("Invalid email or password")
                     elif status == "PENDING":
-                        st.error("❌ Your trial has expired. Please subscribe to continue.")
+                        st.error("Your trial has expired. Please subscribe to continue.")
                     else:
                         # Clear previous user data and load new user data
                         st.session_state.logged_in = True
                         st.session_state.email = email
                         st.session_state.current_view = "dashboard"
                         st.session_state.settings_loaded = False
-                        st.success("✅ Login successful!")
+                        st.success("Login successful!")
                         st.rerun()
         
         st.markdown("---")
@@ -1858,7 +1856,6 @@ def render_signup_page():
     st.markdown("""
         <div class="login-container">
             <div class="login-header">
-                <div class="login-logo">🎯</div>
                 <div class="login-title">Create Account</div>
                 <div class="login-subtitle">Start your 30-day free trial with full features</div>
             </div>
@@ -1871,11 +1868,11 @@ def render_signup_page():
         with st.form("signup_form"):
             st.subheader("Create Your Account")
             
-            name = st.text_input("👤 Full Name", placeholder="Enter your full name")
-            email = st.text_input("📧 Email Address", placeholder="Enter your email")
-            phone = st.text_input("📞 Phone Number", placeholder="Enter your phone number")
-            password = st.text_input("🔒 Password", type="password", placeholder="Create a password")
-            confirm_password = st.text_input("🔒 Confirm Password", type="password", placeholder="Confirm your password")
+            name = st.text_input("Full Name", placeholder="Enter your full name")
+            email = st.text_input("Email Address", placeholder="Enter your email")
+            phone = st.text_input("Phone Number", placeholder="Enter your phone number")
+            password = st.text_input("Password", type="password", placeholder="Create a password")
+            confirm_password = st.text_input("Confirm Password", type="password", placeholder="Confirm your password")
             
             # Terms agreement
             col1, col2 = st.columns([1, 4])
@@ -1886,7 +1883,7 @@ def render_signup_page():
             
             col1, col2 = st.columns(2)
             with col1:
-                signup_button = st.form_submit_button("🎯 Start Free Trial", use_container_width=True, type="primary")
+                signup_button = st.form_submit_button("Start Free Trial", use_container_width=True, type="primary")
             with col2:
                 if st.form_submit_button("← Back to Login", use_container_width=True, type="secondary"):
                     st.session_state.current_view = "login"
@@ -1894,25 +1891,25 @@ def render_signup_page():
             
             if signup_button:
                 if not all([name, email, phone, password, confirm_password]):
-                    st.error("❌ Please fill in all fields")
+                    st.error("Please fill in all fields")
                 elif password != confirm_password:
-                    st.error("❌ Passwords do not match")
+                    st.error("Passwords do not match")
                 elif not agree_terms:
-                    st.error("❌ Please agree to the Terms & Conditions")
+                    st.error("Please agree to the Terms & Conditions")
                 else:
                     # Check if user already exists
                     conn = get_db_conn()
                     with conn.session as s:
-                        existing_user = s.execute(text('SELECT email FROM users WHERE email = :email'), 
+                        existing_user = s.execute(text('SELECT email FROM users WHERE email = :email'),
                                                params=dict(email=email)).fetchone()
-                    
+
                     if existing_user:
-                        st.error("❌ An account with this email already exists")
+                        st.error("An account with this email already exists")
                     else:
                         # Create new user
                         if add_user_to_db(email, name, phone, password):
-                            st.success("✅ Account created successfully! Starting your 30-day free trial...")
-                            
+                            st.success("Account created successfully! Starting your 30-day free trial...")
+
                             # Auto-login after successful signup
                             st.session_state.logged_in = True
                             st.session_state.email = email
@@ -1920,14 +1917,14 @@ def render_signup_page():
                             st.session_state.settings_loaded = False
                             st.rerun()
                         else:
-                            st.error("❌ Error creating account. Please try again.")
+                            st.error("Error creating account. Please try again.")
         
         st.markdown("---")
         
         # Benefits of signing up
         st.markdown("""
             <div style="text-align: center;">
-                <h4>🎁 What's Included in Your Free Trial:</h4>
+                <h4>What's Included in Your Free Trial:</h4>
                 <p>• Full access to all features<br>
                 • 30 days of unlimited conversions<br>
                 • AI-powered ledger mapping<br>
@@ -2005,7 +2002,7 @@ def render_main_page():
     with col2:
         st.markdown("""
             <div class="feature-card">
-                <div class="feature-icon">📊</div>
+                <div class="feature-icon">DATA</div>
                 <div class="feature-title">Journal Automation</div>
                 <div class="feature-description">
                     Convert CSV/Excel journals to Tally XML with intelligent ledger mapping. 
@@ -2072,11 +2069,11 @@ def render_main_page():
     with col2:
         auth_col1, auth_col2 = st.columns(2)
         with auth_col1:
-            if st.button("🚀 Sign In", use_container_width=True, type="primary"):
+            if st.button("Sign In", use_container_width=True, type="primary"):
                 st.session_state.current_view = "login"
                 st.rerun()
         with auth_col2:
-            if st.button("🎯 Start Free Trial", use_container_width=True):
+            if st.button("Start Free Trial", use_container_width=True):
                 st.session_state.current_view = "signup"
                 st.rerun()
 
@@ -2220,13 +2217,13 @@ def render_dashboard_page():
             st.rerun()
     
     with col2:
-        if st.button("📊 Journal Automation\n\nConvert CSV/Excel journals to Tally XML format", 
+        if st.button("Journal Automation\n\nConvert CSV/Excel journals to Tally XML format", 
                     use_container_width=True, help="Process journal entries to Tally XML"):
             st.session_state.current_view = "journal_converter"
             st.rerun()
     
     with col3:
-        if st.button("⚙️ Settings & Configuration\n\nManage templates, ledgers, and automation rules", 
+        if st.button("Settings & Configuration\n\nManage templates, ledgers, and automation rules", 
                     use_container_width=True, help="Configure your automation settings"):
             st.session_state.current_view = "settings"
             st.rerun()
@@ -2239,15 +2236,15 @@ def render_dashboard_page():
     with col1:
         st.subheader("Quick Actions")
         
-        if st.button("📥 Upload Bank Statement", use_container_width=True):
+        if st.button("Upload Bank Statement", use_container_width=True):
             st.session_state.current_view = "bank_converter"
             st.rerun()
             
-        if st.button("📊 Process Journal Entry", use_container_width=True):
+        if st.button("Process Journal Entry", use_container_width=True):
             st.session_state.current_view = "journal_converter"
             st.rerun()
             
-        if st.button("🎯 Configure Smart Rules", use_container_width=True):
+        if st.button("Configure Smart Rules", use_container_width=True):
             st.session_state.current_view = "settings"
             st.rerun()
     
@@ -2274,7 +2271,7 @@ def render_journal_converter_page():
     """Enhanced journal converter page"""
     st.markdown("""
         <div style="margin-bottom: 2rem;">
-            <h1>📊 Journal Automation</h1>
+            <h1>Journal Automation</h1>
             <p style="color: #666; font-size: 1.1rem;">Convert CSV/Excel journals to Tally XML with intelligent mapping</p>
         </div>
     """, unsafe_allow_html=True)
@@ -2288,22 +2285,22 @@ def render_journal_converter_page():
 
     if not ledger_master or ledger_master == ["Bank Suspense A/c (Default)"]:
         st.warning("""
-            ⚠️ **Setup Required**: Please upload your **Ledger Master** in the **Settings** page before using this tool.
+            **Setup Required**: Please upload your **Ledger Master** in the **Settings** page before using this tool.
             
             This ensures accurate mapping of your journal entries to the correct Tally accounts.
         """)
-        if st.button("⚙️ Go to Settings", use_container_width=True):
+        if st.button("Go to Settings", use_container_width=True):
             st.session_state.current_view = "settings"
             st.rerun()
         st.stop()
         
     if not journal_templates:
         st.warning("""
-            ⚠️ **Setup Required**: Please create at least one **Journal Template** in the **Settings** page.
+            **Setup Required**: Please create at least one **Journal Template** in the **Settings** page.
             
             Templates define how your CSV/Excel data maps to Tally ledger structure.
         """)
-        if st.button("⚙️ Go to Settings", use_container_width=True):
+        if st.button("Go to Settings", use_container_width=True):
             st.session_state.current_view = "settings"
             st.rerun()
         st.stop()
@@ -2342,7 +2339,7 @@ def render_journal_converter_page():
     selected_template_name = st.selectbox("Choose your journal template:", template_name_list)
 
     if selected_template_name == "<Select a Template>":
-        st.info("💡 Select a template to define how your journal data should be processed.")
+        st.info("Select a template to define how your journal data should be processed.")
         st.stop()
 
     template_id = journal_templates[selected_template_name]
@@ -2400,7 +2397,7 @@ def render_journal_converter_page():
             # Process file
             df = pd.read_csv(uploaded_file, encoding='latin1') if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
             
-            st.success(f"✅ File processed successfully! Found {len(df)} journal entries.")
+            st.success(f"File processed successfully! Found {len(df)} journal entries.")
             
             st.divider()
             
@@ -2410,14 +2407,14 @@ def render_journal_converter_page():
             
             edited_mappings = {}
 
-            with st.spinner("🔍 Analyzing data with AI..."):
+            with st.spinner("Analyzing data with AI..."):
                 for rule in dynamic_rules:
                     name_col = rule['CSV Column for Ledger Name']
                     if name_col not in df.columns:
-                        st.error(f"❌ Column '{name_col}' not found in your file. Please check your template settings.")
+                        st.error(f"Column '{name_col}' not found in your file. Please check your template settings.")
                         continue
                     
-                    st.markdown(f"#### 📍 Mapping for: `{name_col}`")
+                    st.markdown(f"#### Mapping for: `{name_col}`")
                     
                     unique_values = df[name_col].dropna().unique()
                     
@@ -2447,7 +2444,7 @@ def render_journal_converter_page():
                     with col1:
                         st.info(f"Found {len(mapping_df)} unique values to map. Please review and adjust if needed.")
                     with col2:
-                        if st.button(f"🚀 Auto Map {name_col}", key=f"auto_map_{name_col}", use_container_width=True):
+                        if st.button(f"Auto Map {name_col}", key=f"auto_map_{name_col}", use_container_width=True):
                             # Apply auto-mapping based on rules and learned mappings
                             auto_mappings = auto_map_ledgers_based_on_rules(
                                 unique_values,
@@ -2463,7 +2460,7 @@ def render_journal_converter_page():
                                 if csv_value in auto_mappings and auto_mappings[csv_value] != suspense_ledger:
                                     mapping_df.at[idx, 'Mapped Ledger'] = auto_mappings[csv_value]
                             
-                            st.success(f"✅ Auto-mapped {name_col} column!")
+                            st.success(f"Auto-mapped {name_col} column!")
                             st.rerun()
                     
                     # SIMPLIFIED: Removed confidence summary display
@@ -2488,7 +2485,7 @@ def render_journal_converter_page():
             st.divider()
             
             # Final Actions
-            if st.button(f"🚀 Convert to Tally {voucher_type} XML", type="primary", use_container_width=True):
+            if st.button(f"Convert to Tally {voucher_type} XML", type="primary", use_container_width=True):
                 # Automatically learn from user mappings when they generate XML
                 learned_count = 0
                 for col_name, mapping_df in edited_mappings.items():
@@ -2519,7 +2516,7 @@ def render_journal_converter_page():
                         edited_mappings
                     )
                 
-                st.success("✅ Tally XML generated successfully!")
+                st.success("Tally XML generated successfully!")
                 st.download_button(
                     label=f"📥 Download {voucher_type}Vouchers.xml",
                     data=xml_data,
@@ -2529,7 +2526,7 @@ def render_journal_converter_page():
                 )
                     
         except Exception as e:
-            st.error(f"❌ Error processing file: {e}")
+            st.error(f"Error processing file: {e}")
 
 def render_bank_converter_page():
     """Simplified bank converter page with auto-mapping"""
@@ -2549,11 +2546,11 @@ def render_bank_converter_page():
     # Check setup requirements
     if not suspense_ledger or suspense_ledger == "Bank Suspense A/c (Default)":
         st.warning("""
-            ⚠️ **Setup Required**: Please set your **Default Suspense Ledger** in the **Settings** page.
+            **Setup Required**: Please set your **Default Suspense Ledger** in the **Settings** page.
             
             This account will be used for transactions that cannot be automatically matched.
         """)
-        if st.button("⚙️ Go to Settings", use_container_width=True):
+        if st.button("Go to Settings", use_container_width=True):
             st.session_state.current_view = "settings"
             st.rerun()
         st.stop()
@@ -2636,7 +2633,7 @@ def render_bank_converter_page():
             # Validate required columns
             for col in ['Date', 'Narration', 'Debit', 'Credit']:
                 if col not in df.columns:
-                    st.error(f"❌ Required column '{col}' not found in file. Please use the template.")
+                    st.error(f"Required column '{col}' not found in file. Please use the template.")
                     st.stop()
             
             # Convert numeric columns
@@ -2646,7 +2643,7 @@ def render_bank_converter_page():
             # Set default ledger for all transactions
             df['Mapped Ledger'] = suspense_ledger
             
-            st.success(f"✅ Bank statement processed! {len(df)} transactions ready for mapping.")
+            st.success(f"Bank statement processed! {len(df)} transactions ready for mapping.")
             
             st.divider()
             
@@ -2657,7 +2654,7 @@ def render_bank_converter_page():
             col1, col2, col3 = st.columns([2, 1, 1])
             with col1:
                 st.info("""
-                **💡 Smart Mapping:**
+                **Smart Mapping:**
                 - Uses your smart rules and learned mappings
                 - Automatically suggests ledgers based on previous decisions
                 - Updates only unmapped transactions by default
@@ -2668,7 +2665,7 @@ def render_bank_converter_page():
                                                help="If checked, will replace ALL mappings. If unchecked, only updates suspense ledger mappings.")
             
             with col3:
-                if st.button("🚀 Auto Map Ledgers", use_container_width=True, type="secondary"):
+                if st.button("Auto Map Ledgers", use_container_width=True, type="secondary"):
                     with st.spinner("Applying smart rules and learned mappings..."):
                         # Get unique narrations for auto-mapping
                         unique_narrations = df['Narration'].unique()
@@ -2695,7 +2692,7 @@ def render_bank_converter_page():
                                     df.at[idx, 'Mapped Ledger'] = auto_ledger
                                     updated_count += 1
                         
-                        st.success(f"✅ Auto-mapped {updated_count} transactions!")
+                        st.success(f"Auto-mapped {updated_count} transactions!")
                         
                         # Show mapping statistics
                         if updated_count > 0:
@@ -2742,7 +2739,7 @@ def render_bank_converter_page():
             st.divider()
             
             # Final Actions
-            if st.button("🚀 Generate Tally XML", type="primary", use_container_width=True):
+            if st.button("Generate Tally XML", type="primary", use_container_width=True):
                 # Automatically learn from user mappings when they generate XML
                 learned_count = 0
                 for index, row in edited_df.iterrows():
@@ -2768,7 +2765,7 @@ def render_bank_converter_page():
                         company_name
                     )
                 
-                st.success("✅ Tally XML generated successfully!")
+                st.success("Tally XML generated successfully!")
                 st.download_button(
                     label="📥 Download BankVouchers.xml",
                     data=xml_data,
@@ -2778,18 +2775,18 @@ def render_bank_converter_page():
                 )
                     
         except Exception as e:
-            st.error(f"❌ Error processing bank statement: {e}")
+            st.error(f"Error processing bank statement: {e}")
 
 def render_settings_page():
     """Enhanced settings page"""
     st.markdown("""
         <div style="margin-bottom: 2rem;">
-            <h1>⚙️ Settings & Configuration</h1>
+            <h1>Settings & Configuration</h1>
             <p style="color: #666; font-size: 1.1rem;">Configure your financial automation settings</p>
         </div>
     """, unsafe_allow_html=True)
     
-    tab1, tab2, tab3, tab4 = st.tabs(["🏢 Company", "📊 Journals", "🏦 Bank Rules", "🤖 AI Settings"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Company", "Journals", "Bank Rules", "AI Settings"])
 
     with tab1:
         st.subheader("Company Settings")
@@ -2802,7 +2799,7 @@ def render_settings_page():
                 help="This name must exactly match your company name in Tally."
             )
             
-            if st.button("💾 Save Company Settings", use_container_width=True):
+            if st.button("Save Company Settings", use_container_width=True):
                 conn = get_db_conn()
                 with conn.session as s:
                     s.execute(text('''
@@ -2811,7 +2808,7 @@ def render_settings_page():
                     '''), params=dict(email=st.session_state.email, name=st.session_state.company_name_input))
                     s.commit()
                 st.session_state.company_name = st.session_state.company_name_input
-                st.success("✅ Company name saved successfully!")
+                st.success("Company name saved successfully!")
 
     with tab2:
         st.subheader("Journal Template Manager")
@@ -2910,7 +2907,7 @@ def render_settings_page():
         # Save Template
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("💾 Save Template", type="primary", use_container_width=True):
+            if st.button("Save Template", type="primary", use_container_width=True):
                 save_name = new_template_name if new_template_name else selected_template_name
                 if not save_name or save_name == "<Create New Template>":
                     st.error("Please enter a name for your template.")
@@ -2933,7 +2930,7 @@ def render_settings_page():
                                                  params=dict(email=st.session_state.email, name=save_name)).fetchone()
 
                         if not template_id_res:
-                            st.error("❌ Failed to create or find template. Please try again.")
+                            st.error("Failed to create or find template. Please try again.")
                             return
 
                         template_id = template_id_res[0]
@@ -2957,18 +2954,18 @@ def render_settings_page():
                         s.commit()
                     
                     st.session_state.settings_loaded = False
-                    st.success(f"✅ Template '{save_name}' saved successfully!")
+                    st.success(f"Template '{save_name}' saved successfully!")
                     st.rerun()
 
         with col2:
             if selected_template_name != "<Create New Template>":
-                if st.button("🗑️ Delete Template", type="secondary", use_container_width=True):
+                if st.button("Delete Template", type="secondary", use_container_width=True):
                     conn = get_db_conn()
                     with conn.session as s:
                         s.execute(text('DELETE FROM journal_templates WHERE id = :id'), params=dict(id=template_id))
                         s.commit()
                     st.session_state.settings_loaded = False
-                    st.success(f"✅ Template '{selected_template_name}' deleted.")
+                    st.success(f"Template '{selected_template_name}' deleted.")
                     st.rerun()
 
     with tab3:
@@ -2997,7 +2994,7 @@ def render_settings_page():
                     df.columns = [str(c).strip().title() for c in df.columns] 
                     
                     if 'Ledger Name' not in df.columns:
-                        st.error("❌ File must have a column named 'Ledger Name'. Please check your export.")
+                        st.error("File must have a column named 'Ledger Name'. Please check your export.")
                     else:
                         ledgers_list = df['Ledger Name'].dropna().astype(str).unique().tolist()
                         ledgers_list.sort() 
@@ -3010,10 +3007,10 @@ def render_settings_page():
                             s.commit()
                         
                         st.session_state.ledger_master = ledgers_list 
-                        st.success(f"✅ Successfully uploaded {len(ledgers_list)} ledgers!")
+                        st.success(f"Successfully uploaded {len(ledgers_list)} ledgers!")
                         
                 except Exception as e:
-                    st.error(f"❌ Error uploading ledger master: {e}")
+                    st.error(f"Error uploading ledger master: {e}")
         
         else:  # Manual entry
             st.markdown("##### Enter Ledgers Manually")
@@ -3074,7 +3071,7 @@ def render_settings_page():
                     st.session_state.manual_ledgers = updated_ledgers
                 
                 # Save manual ledgers button
-                if st.button("💾 Save Manual Ledgers", use_container_width=True):
+                if st.button("Save Manual Ledgers", use_container_width=True):
                     if st.session_state.manual_ledgers:
                         conn = get_db_conn()
                         with conn.session as s:
@@ -3084,9 +3081,9 @@ def render_settings_page():
                             s.commit()
                         
                         st.session_state.ledger_master = st.session_state.manual_ledgers.copy()
-                        st.success(f"✅ Successfully saved {len(st.session_state.manual_ledgers)} ledgers!")
+                        st.success(f"Successfully saved {len(st.session_state.manual_ledgers)} ledgers!")
                     else:
-                        st.error("❌ No ledgers to save!")
+                        st.error("No ledgers to save!")
             else:
                 st.info("No ledgers added yet. Use the form above to add your Tally ledger names.")
         
@@ -3149,7 +3146,7 @@ def render_settings_page():
             key="bank_rules_editor"
         )
         
-        if st.button("💾 Save All Bank Settings", type="primary", use_container_width=True):
+        if st.button("Save All Bank Settings", type="primary", use_container_width=True):
             # Save all bank settings
             rules_to_save = edited_rules_df.to_dict('records')
 
@@ -3175,7 +3172,7 @@ def render_settings_page():
             
             st.session_state.default_suspense_ledger = new_suspense
             st.session_state.bank_rules = rules_to_save
-            st.success("✅ All bank settings saved successfully!")
+            st.success("All bank settings saved successfully!")
             st.rerun()
 
     with tab4:
@@ -3187,18 +3184,18 @@ def render_settings_page():
         with col1:
             st.markdown("#### AI Status")
             if ledger_mapper.initialized:
-                st.success("✅ Semantic AI: ACTIVE")
+                st.success("Semantic AI: ACTIVE")
                 st.write("AI model is ready for intelligent ledger mapping.")
             else:
-                st.warning("⚠️ Semantic AI: NOT AVAILABLE")
+                st.warning("Semantic AI: NOT AVAILABLE")
                 st.write("Install sentence-transformers for enhanced AI features.")
             
-            if st.button("🔄 Initialize AI Models", use_container_width=True):
+            if st.button("Initialize AI Models", use_container_width=True):
                 if initialize_ai_model():
-                    st.success("✅ AI models initialized successfully!")
+                    st.success("AI models initialized successfully!")
                     st.rerun()
                 else:
-                    st.error("❌ Failed to initialize AI models.")
+                    st.error("Failed to initialize AI models.")
 
         with col2:
             st.markdown("#### Performance")
@@ -3247,14 +3244,14 @@ def render_settings_page():
                     )
             
             with col2:
-                if st.button("🗑️ Clear All Learned Data", type="secondary", use_container_width=True):
+                if st.button("Clear All Learned Data", type="secondary", use_container_width=True):
                     conn = get_db_conn()
                     with conn.session as s:
                         s.execute(text('DELETE FROM user_learned_mappings WHERE email = :email'), 
                                 params=dict(email=st.session_state.email))
                         s.commit()
                     st.session_state.settings_loaded = False
-                    st.success("✅ All learned mappings cleared!")
+                    st.success("All learned mappings cleared!")
                     st.rerun()
         else:
             st.info("No learned mappings yet. The AI will start learning automatically as you map transactions in the Journal and Bank converters.")
@@ -3307,19 +3304,19 @@ else:
         # Sidebar navigation with larger buttons for web
         nav_cols = st.columns(1)
         with nav_cols[0]:
-            if st.button("📊 Dashboard", use_container_width=True, key="sidebar_dashboard"):
+            if st.button("Dashboard", use_container_width=True, key="sidebar_dashboard"):
                 st.session_state.current_view = "dashboard"
                 st.rerun()
                 
-            if st.button("🏦 Bank Reconciliation", use_container_width=True, key="sidebar_bank"):
+            if st.button("Bank Reconciliation", use_container_width=True, key="sidebar_bank"):
                 st.session_state.current_view = "bank_converter"
                 st.rerun()
                 
-            if st.button("📊 Journal Automation", use_container_width=True, key="sidebar_journal"):
+            if st.button("Journal Automation", use_container_width=True, key="sidebar_journal"):
                 st.session_state.current_view = "journal_converter"
                 st.rerun()
                 
-            if st.button("⚙️ Settings", use_container_width=True, key="sidebar_settings"):
+            if st.button("Settings", use_container_width=True, key="sidebar_settings"):
                 st.session_state.current_view = "settings"
                 st.rerun()
 
