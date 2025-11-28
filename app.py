@@ -828,7 +828,21 @@ def init_db():
                 UNIQUE(email, narration_text)
             );
         '''))
-        
+        s.execute(text('''
+            CREATE TABLE IF NOT EXISTS tally_connection_settings (
+                email TEXT PRIMARY KEY,
+                tally_server_host TEXT DEFAULT 'localhost',
+                tally_server_port INTEGER DEFAULT 9000,
+                tally_company_name TEXT,
+                enable_direct_sync BOOLEAN DEFAULT 0,
+                enable_direct_push_bank BOOLEAN DEFAULT 0,
+                enable_direct_push_journal BOOLEAN DEFAULT 0,
+                sync_ledgers_on_load BOOLEAN DEFAULT 0,
+                last_sync_date DATETIME,
+                FOREIGN KEY (email) REFERENCES users (email)
+            );
+        '''))
+
         # Add Admin User
         try:
             admin_pass_hash = hash_password("admin@2003")
@@ -985,6 +999,28 @@ def load_user_settings(email):
         except Exception as e:
             print(f"Error loading learned mappings: {e}")
             st.session_state.learned_mappings = {}
+
+        # Load Tally connection settings
+        try:
+            tally_conn = s.execute(text('SELECT * FROM tally_connection_settings WHERE email = :email'), params=dict(email=email)).fetchone()
+            if tally_conn:
+                st.session_state.tally_server_host = tally_conn[1] if tally_conn[1] else "localhost"
+                st.session_state.tally_server_port = tally_conn[2] if tally_conn[2] else 9000
+                st.session_state.tally_company_name = tally_conn[3] if tally_conn[3] else ""
+                st.session_state.enable_direct_sync = bool(tally_conn[4]) if tally_conn[4] is not None else False
+                st.session_state.enable_direct_push_bank = bool(tally_conn[5]) if tally_conn[5] is not None else False
+                st.session_state.enable_direct_push_journal = bool(tally_conn[6]) if tally_conn[6] is not None else False
+                st.session_state.sync_ledgers_on_load = bool(tally_conn[7]) if tally_conn[7] is not None else False
+        except Exception as e:
+            print(f"Error loading Tally connection settings: {e}")
+            # Set defaults if loading fails
+            st.session_state.tally_server_host = "localhost"
+            st.session_state.tally_server_port = 9000
+            st.session_state.tally_company_name = ""
+            st.session_state.enable_direct_sync = False
+            st.session_state.enable_direct_push_bank = False
+            st.session_state.enable_direct_push_journal = False
+            st.session_state.sync_ledgers_on_load = False
 
     st.session_state.settings_loaded = True
 
@@ -1800,6 +1836,20 @@ if "learned_mappings" not in st.session_state:
     st.session_state.learned_mappings = {}
 if "ai_initialized" not in st.session_state:
     st.session_state.ai_initialized = False
+if "tally_server_host" not in st.session_state:
+    st.session_state.tally_server_host = "localhost"
+if "tally_server_port" not in st.session_state:
+    st.session_state.tally_server_port = 9000
+if "tally_company_name" not in st.session_state:
+    st.session_state.tally_company_name = ""
+if "enable_direct_sync" not in st.session_state:
+    st.session_state.enable_direct_sync = False
+if "enable_direct_push_bank" not in st.session_state:
+    st.session_state.enable_direct_push_bank = False
+if "enable_direct_push_journal" not in st.session_state:
+    st.session_state.enable_direct_push_journal = False
+if "sync_ledgers_on_load" not in st.session_state:
+    st.session_state.sync_ledgers_on_load = False
 
 # --- 8. ENHANCED PAGE RENDERING FUNCTIONS FOR FINANCIAL AUTOMATION ---
 
@@ -2786,7 +2836,7 @@ def render_settings_page():
         </div>
     """, unsafe_allow_html=True)
     
-    tab1, tab2, tab3, tab4 = st.tabs(["Company", "Journals", "Bank Rules", "AI Settings"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Company", "Journals", "Bank Rules", "AI Settings", "Tally Integration"])
 
     with tab1:
         st.subheader("Company Settings")
@@ -3255,6 +3305,129 @@ def render_settings_page():
                     st.rerun()
         else:
             st.info("No learned mappings yet. The AI will start learning automatically as you map transactions in the Journal and Bank converters.")
+
+    with tab5:
+        st.subheader("Tally Direct Integration")
+        st.markdown("""
+            <div style="background-color: #e8f4f8; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;">
+                <p style="margin: 0; color: #1e3a8a;">
+                    Configure direct integration with Tally for real-time sync and push capabilities.
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("#### Tally Server Connection")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.text_input(
+                "Tally Server Host:",
+                value=st.session_state.tally_server_host,
+                key="tally_host_input",
+                help="Enter the IP address or hostname of your Tally server (default: localhost)"
+            )
+        with col2:
+            st.number_input(
+                "Tally Server Port:",
+                value=st.session_state.tally_server_port,
+                key="tally_port_input",
+                min_value=1,
+                max_value=65535,
+                help="Enter the port number for Tally ODBC connection (default: 9000)"
+            )
+
+        st.text_input(
+            "Tally Company Name (for Direct Sync):",
+            value=st.session_state.tally_company_name,
+            key="tally_company_input",
+            help="Enter your Tally company name to sync ledgers directly from Tally"
+        )
+
+        st.divider()
+
+        st.markdown("#### Direct Sync Settings")
+        st.checkbox(
+            "Enable direct sync of Tally ledgers",
+            value=st.session_state.enable_direct_sync,
+            key="direct_sync_checkbox",
+            help="When enabled, ledgers will be automatically synced from Tally when you load the application"
+        )
+
+        st.checkbox(
+            "Sync ledgers on application load",
+            value=st.session_state.sync_ledgers_on_load,
+            key="sync_on_load_checkbox",
+            help="Automatically sync ledgers from Tally each time you log in"
+        )
+
+        st.divider()
+
+        st.markdown("#### Direct Push Settings")
+        st.markdown("Enable direct push to automatically send vouchers to Tally instead of downloading XML files.")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.checkbox(
+                "Enable direct push for Bank vouchers",
+                value=st.session_state.enable_direct_push_bank,
+                key="direct_push_bank_checkbox",
+                help="When enabled, bank reconciliation vouchers will be pushed directly to Tally"
+            )
+        with col2:
+            st.checkbox(
+                "Enable direct push for Journal vouchers",
+                value=st.session_state.enable_direct_push_journal,
+                key="direct_push_journal_checkbox",
+                help="When enabled, journal vouchers will be pushed directly to Tally"
+            )
+
+        st.divider()
+
+        col1, col2, col3 = st.columns([2, 2, 1])
+        with col1:
+            if st.button("Save Tally Integration Settings", type="primary", use_container_width=True):
+                conn = get_db_conn()
+                with conn.session as s:
+                    s.execute(text('''
+                        INSERT INTO tally_connection_settings
+                        (email, tally_server_host, tally_server_port, tally_company_name,
+                         enable_direct_sync, enable_direct_push_bank, enable_direct_push_journal,
+                         sync_ledgers_on_load, last_sync_date)
+                        VALUES (:email, :host, :port, :company, :sync, :push_bank, :push_journal, :sync_on_load, CURRENT_TIMESTAMP)
+                        ON CONFLICT(email) DO UPDATE SET
+                            tally_server_host = :host,
+                            tally_server_port = :port,
+                            tally_company_name = :company,
+                            enable_direct_sync = :sync,
+                            enable_direct_push_bank = :push_bank,
+                            enable_direct_push_journal = :push_journal,
+                            sync_ledgers_on_load = :sync_on_load,
+                            last_sync_date = CURRENT_TIMESTAMP
+                    '''), params=dict(
+                        email=st.session_state.email,
+                        host=st.session_state.tally_host_input,
+                        port=st.session_state.tally_port_input,
+                        company=st.session_state.tally_company_input,
+                        sync=st.session_state.direct_sync_checkbox,
+                        push_bank=st.session_state.direct_push_bank_checkbox,
+                        push_journal=st.session_state.direct_push_journal_checkbox,
+                        sync_on_load=st.session_state.sync_on_load_checkbox
+                    ))
+                    s.commit()
+
+                # Update session state with saved values
+                st.session_state.tally_server_host = st.session_state.tally_host_input
+                st.session_state.tally_server_port = st.session_state.tally_port_input
+                st.session_state.tally_company_name = st.session_state.tally_company_input
+                st.session_state.enable_direct_sync = st.session_state.direct_sync_checkbox
+                st.session_state.enable_direct_push_bank = st.session_state.direct_push_bank_checkbox
+                st.session_state.enable_direct_push_journal = st.session_state.direct_push_journal_checkbox
+                st.session_state.sync_ledgers_on_load = st.session_state.sync_on_load_checkbox
+
+                st.success("Tally integration settings saved successfully!")
+
+        with col2:
+            if st.button("Test Connection", use_container_width=True):
+                st.info("Connection test feature will be implemented in the next update.")
 
 def logout():
     st.session_state.logged_in = False
