@@ -3567,6 +3567,22 @@ def render_settings_page():
             </div>
         """, unsafe_allow_html=True)
 
+        # Auto-detect companies on tab load if connection settings exist
+        if 'auto_detected_companies' not in st.session_state:
+            st.session_state.auto_detected_companies = False
+
+        if (not st.session_state.auto_detected_companies and
+            st.session_state.tally_server_host and
+            st.session_state.tally_server_port):
+            with st.spinner("Detecting companies from Tally server..."):
+                success, message, companies = fetch_companies_from_tally(
+                    st.session_state.tally_server_host,
+                    st.session_state.tally_server_port
+                )
+                if success and companies:
+                    st.session_state.detected_companies = companies
+                    st.session_state.auto_detected_companies = True
+
         st.markdown("#### Tally Server Connection")
         col1, col2 = st.columns(2)
         with col1:
@@ -3596,7 +3612,7 @@ def render_settings_page():
                 options=company_options,
                 index=company_options.index(st.session_state.tally_company_name) if st.session_state.tally_company_name in company_options else 0,
                 key="tally_company_select",
-                help="Select your Tally company name from detected companies. Click 'Test Connection' to detect companies from Tally."
+                help="Select your Tally company name from detected companies. If you don't see your company, click 'Test Connection' to refresh the list."
             )
 
             # If "Manual Entry" is selected, show text input
@@ -3708,7 +3724,9 @@ def render_settings_page():
                 st.success("Tally integration settings saved successfully!")
 
         with col2:
-            if st.button("Test Connection", use_container_width=True):
+            if st.button("Test Connection", use_container_width=True, help="Click to refresh company list from Tally"):
+                # Reset auto-detection flag to allow fresh detection
+                st.session_state.auto_detected_companies = False
                 with st.spinner("Testing connection and detecting companies..."):
                     success, message, companies = fetch_companies_from_tally(
                         st.session_state.tally_host_input,
@@ -3716,6 +3734,7 @@ def render_settings_page():
                     )
                     if success:
                         st.session_state.detected_companies = companies
+                        st.session_state.auto_detected_companies = True
                         st.success(message)
                         if companies:
                             st.info(f"📋 Detected companies: {', '.join(companies)}")
