@@ -7,6 +7,8 @@ import hashlib
 from html import escape
 import difflib
 from sqlalchemy.sql import text
+import requests
+import xml.etree.ElementTree as ET
 
 # --- ENHANCED AI IMPORTS ---
 import re
@@ -842,6 +844,17 @@ def init_db():
                 FOREIGN KEY (email) REFERENCES users (email)
             );
         '''))
+        s.execute(text('''
+            CREATE TABLE IF NOT EXISTS tally_synced_ledgers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT,
+                ledger_name TEXT,
+                ledger_group TEXT,
+                sync_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (email) REFERENCES users (email),
+                UNIQUE(email, ledger_name)
+            );
+        '''))
 
         # Add Admin User
         try:
@@ -1021,6 +1034,23 @@ def load_user_settings(email):
             st.session_state.enable_direct_push_bank = False
             st.session_state.enable_direct_push_journal = False
             st.session_state.sync_ledgers_on_load = False
+
+        # Auto-sync ledgers if enabled
+        if st.session_state.sync_ledgers_on_load and st.session_state.tally_company_name:
+            try:
+                success, message, count = sync_ledgers_from_tally(
+                    st.session_state.tally_server_host,
+                    st.session_state.tally_server_port,
+                    st.session_state.tally_company_name,
+                    email
+                )
+                if success:
+                    # Load synced ledgers into ledger master
+                    synced_ledgers = get_synced_ledgers(email)
+                    if synced_ledgers:
+                        st.session_state.ledger_master = [row[0] for row in synced_ledgers]
+            except Exception as e:
+                print(f"Auto-sync failed: {e}")
 
     st.session_state.settings_loaded = True
 
@@ -1801,6 +1831,122 @@ def create_bank_tally_xml(df, bank_ledger, company_name):
         company_name=company_name_safe,
         tally_messages="\n".join(all_tally_messages)
     )
+
+def sync_ledgers_from_tally(host, port, company_name, email):
+    """
+    Fetches ledger list from Tally and stores in database.
+    Returns tuple (success: bool, message: str, ledger_count: int)
+    """
+    try:
+        # Construct Tally XML request to get all ledgers
+        tally_request = f'''
+        <ENVELOPE>
+            <HEADER>
+                <VERSION>1</VERSION>
+                <TALLYREQUEST>Export</TALLYREQUEST>
+                <TYPE>Collection</TYPE>
+                <ID>List of Ledgers</ID>
+            </HEADER>
+            <BODY>
+                <DESC>
+                    <STATICVARIABLES>
+                        <SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>
+                        <SVCURRENTCOMPANY>{escape(company_name)}</SVCURRENTCOMPANY>
+                    </STATICVARIABLES>
+                    <TDL>
+                        <TDLMESSAGE>
+                            <COLLECTION NAME="MyLedgers" ISMODIFY="No" ISFIXED="No">
+                                <TYPE>Ledger</TYPE>
+                                <FETCH>Name, Parent</FETCH>
+                            </COLLECTION>
+                        </TDLMESSAGE>
+                    </TDL>
+                </DESC>
+            </BODY>
+        </ENVELOPE>
+        '''
+
+        # Send request to Tally
+        url = f"http://{host}:{port}"
+        headers = {'Content-Type': 'text/xml'}
+
+        response = requests.post(url, data=tally_request, headers=headers, timeout=10)
+
+        if response.status_code != 200:
+            return False, f"Tally server returned error: {response.status_code}", 0
+
+        # Parse XML response
+        try:
+            root = ET.fromstring(response.text)
+        except ET.ParseError as e:
+            return False, f"Failed to parse Tally response: {str(e)}", 0
+
+        # Extract ledgers from response
+        ledgers = []
+
+        # Look for LEDGER elements in the response
+        for ledger_elem in root.findall('.//LEDGER'):
+            name_elem = ledger_elem.find('.//NAME')
+            parent_elem = ledger_elem.find('.//PARENT')
+
+            if name_elem is not None and name_elem.text:
+                ledger_name = name_elem.text.strip()
+                ledger_group = parent_elem.text.strip() if parent_elem is not None and parent_elem.text else "Unknown"
+                ledgers.append((ledger_name, ledger_group))
+
+        if not ledgers:
+            return False, "No ledgers found in Tally response. Please check company name and Tally configuration.", 0
+
+        # Store ledgers in database
+        conn = get_db_conn()
+        with conn.session as s:
+            # Clear existing ledgers for this user
+            s.execute(text('DELETE FROM tally_synced_ledgers WHERE email = :email'),
+                     params={'email': email})
+
+            # Insert new ledgers
+            for ledger_name, ledger_group in ledgers:
+                s.execute(text('''
+                    INSERT OR REPLACE INTO tally_synced_ledgers (email, ledger_name, ledger_group)
+                    VALUES (:email, :ledger_name, :ledger_group)
+                '''), params={
+                    'email': email,
+                    'ledger_name': ledger_name,
+                    'ledger_group': ledger_group
+                })
+
+            # Update last sync date
+            s.execute(text('''
+                UPDATE tally_connection_settings
+                SET last_sync_date = :sync_date
+                WHERE email = :email
+            '''), params={
+                'email': email,
+                'sync_date': datetime.now()
+            })
+
+            s.commit()
+
+        return True, f"Successfully synced {len(ledgers)} ledgers from Tally", len(ledgers)
+
+    except requests.exceptions.ConnectionError:
+        return False, f"Could not connect to Tally server at {host}:{port}. Please ensure Tally is running with web server enabled.", 0
+    except requests.exceptions.Timeout:
+        return False, "Connection to Tally server timed out. Please try again.", 0
+    except Exception as e:
+        return False, f"Error syncing ledgers: {str(e)}", 0
+
+def get_synced_ledgers(email):
+    """Retrieves synced ledgers from database for the given user."""
+    conn = get_db_conn()
+    with conn.session as s:
+        result = s.execute(text('''
+            SELECT ledger_name, ledger_group, sync_date
+            FROM tally_synced_ledgers
+            WHERE email = :email
+            ORDER BY ledger_name
+        '''), params={'email': email})
+        return result.fetchall()
 
 # --- 6. Page Configuration ---
 st.set_page_config(
@@ -3428,6 +3574,92 @@ def render_settings_page():
         with col2:
             if st.button("Test Connection", use_container_width=True):
                 st.info("Connection test feature will be implemented in the next update.")
+
+        with col3:
+            if st.button("Sync Ledgers Now", use_container_width=True, type="secondary"):
+                if not st.session_state.tally_company_name:
+                    st.error("Please enter Tally Company Name and save settings first!")
+                else:
+                    with st.spinner("Syncing ledgers from Tally..."):
+                        success, message, count = sync_ledgers_from_tally(
+                            st.session_state.tally_server_host,
+                            st.session_state.tally_server_port,
+                            st.session_state.tally_company_name,
+                            st.session_state.email
+                        )
+                        if success:
+                            st.success(message)
+                            # Update ledger master with synced ledgers
+                            synced_ledgers = get_synced_ledgers(st.session_state.email)
+                            if synced_ledgers:
+                                st.session_state.ledger_master = [row[0] for row in synced_ledgers]
+                            st.rerun()
+                        else:
+                            st.error(message)
+
+        st.divider()
+
+        # Display synced ledgers information
+        st.markdown("#### Synced Ledgers from Tally")
+
+        # Get last sync date
+        conn = get_db_conn()
+        with conn.session as s:
+            result = s.execute(text('''
+                SELECT last_sync_date FROM tally_connection_settings WHERE email = :email
+            '''), params={'email': st.session_state.email})
+            row = result.fetchone()
+            last_sync = row[0] if row and row[0] else None
+
+        col1, col2 = st.columns(2)
+        with col1:
+            synced_ledgers = get_synced_ledgers(st.session_state.email)
+            if synced_ledgers:
+                st.metric("Total Synced Ledgers", len(synced_ledgers))
+            else:
+                st.metric("Total Synced Ledgers", 0)
+
+        with col2:
+            if last_sync:
+                st.metric("Last Sync", last_sync.strftime("%Y-%m-%d %H:%M:%S") if isinstance(last_sync, datetime) else str(last_sync))
+            else:
+                st.metric("Last Sync", "Never")
+
+        # Display synced ledgers in a table
+        if synced_ledgers:
+            st.markdown("##### Ledger List")
+            ledgers_df = pd.DataFrame(synced_ledgers, columns=['Ledger Name', 'Group', 'Sync Date'])
+
+            # Add search filter
+            search_term = st.text_input("Search Ledgers:", placeholder="Type to filter ledgers...", key="ledger_search")
+
+            if search_term:
+                ledgers_df = ledgers_df[ledgers_df['Ledger Name'].str.contains(search_term, case=False, na=False)]
+
+            st.dataframe(
+                ledgers_df,
+                use_container_width=True,
+                height=400,
+                column_config={
+                    "Ledger Name": st.column_config.TextColumn("Ledger Name", width="medium"),
+                    "Group": st.column_config.TextColumn("Group", width="small"),
+                    "Sync Date": st.column_config.DatetimeColumn("Synced On", width="small")
+                },
+                hide_index=True
+            )
+
+            # Export synced ledgers
+            if st.button("Export Synced Ledgers to CSV", use_container_width=True):
+                csv = ledgers_df.to_csv(index=False)
+                st.download_button(
+                    label="Download CSV",
+                    data=csv,
+                    file_name=f"tally_ledgers_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
+        else:
+            st.info("No ledgers synced yet. Click 'Sync Ledgers Now' to fetch ledgers from Tally.")
 
 def logout():
     st.session_state.logged_in = False
