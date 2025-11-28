@@ -1936,6 +1936,109 @@ def sync_ledgers_from_tally(host, port, company_name, email):
     except Exception as e:
         return False, f"Error syncing ledgers: {str(e)}", 0
 
+def fetch_companies_from_tally(host, port):
+    """
+    Fetches list of company names from Tally server.
+    Returns tuple (success: bool, message: str, companies: list)
+    """
+    try:
+        # Construct Tally XML request to get all companies
+        tally_request = '''
+        <ENVELOPE>
+            <HEADER>
+                <VERSION>1</VERSION>
+                <TALLYREQUEST>Export</TALLYREQUEST>
+                <TYPE>Data</TYPE>
+                <ID>ListOfCompanies</ID>
+            </HEADER>
+            <BODY>
+                <DESC>
+                    <STATICVARIABLES>
+                        <SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>
+                    </STATICVARIABLES>
+                    <TDL>
+                        <TDLMESSAGE>
+                            <REPORT NAME="ListOfCompanies">
+                                <FORMS>List</FORMS>
+                                <FORM>List</FORM>
+                            </REPORT>
+                            <FORM NAME="List">
+                                <TOPPARTS>List</TOPPARTS>
+                                <PART>List</PART>
+                            </FORM>
+                            <PART NAME="List">
+                                <TOPLINES>CompanyList</TOPLINES>
+                                <LINE>CompanyList</LINE>
+                                <REPEAT>CompanyList : Company</REPEAT>
+                                <SCROLLED>Vertical</SCROLLED>
+                            </PART>
+                            <LINE NAME="CompanyList">
+                                <FIELD>CompanyName</FIELD>
+                            </LINE>
+                            <FIELD NAME="CompanyName">
+                                <SET>$Name</SET>
+                            </FIELD>
+                            <COLLECTION NAME="Company">
+                                <TYPE>Company</TYPE>
+                            </COLLECTION>
+                        </TDLMESSAGE>
+                    </TDL>
+                </DESC>
+            </BODY>
+        </ENVELOPE>
+        '''
+
+        # Send request to Tally
+        url = f"http://{host}:{port}"
+        headers = {'Content-Type': 'text/xml'}
+
+        response = requests.post(url, data=tally_request, headers=headers, timeout=10)
+
+        if response.status_code != 200:
+            return False, f"Tally server returned error: {response.status_code}", []
+
+        # Parse XML response to extract company names
+        try:
+            root = ET.fromstring(response.text)
+        except ET.ParseError as e:
+            return False, f"Failed to parse Tally response: {str(e)}", []
+
+        # Extract company names from response
+        companies = []
+
+        # Try multiple possible XML paths for company names
+        for company_elem in root.findall('.//COMPANYNAME'):
+            if company_elem.text:
+                companies.append(company_elem.text.strip())
+
+        # Alternative path - check for NAME elements under COMPANY
+        if not companies:
+            for company_elem in root.findall('.//COMPANY'):
+                name_elem = company_elem.find('.//NAME')
+                if name_elem is not None and name_elem.text:
+                    companies.append(name_elem.text.strip())
+
+        # Another alternative - direct NAME elements
+        if not companies:
+            for name_elem in root.findall('.//NAME'):
+                if name_elem.text and name_elem.text.strip():
+                    companies.append(name_elem.text.strip())
+
+        # Remove duplicates while preserving order
+        companies = list(dict.fromkeys(companies))
+
+        if not companies:
+            return False, "No companies found on Tally server. Please ensure Tally is running and companies are loaded.", []
+
+        return True, f"Successfully detected {len(companies)} company(ies) from Tally", companies
+
+    except requests.exceptions.ConnectionError:
+        return False, f"Could not connect to Tally server at {host}:{port}. Please ensure Tally is running with web server enabled.", []
+    except requests.exceptions.Timeout:
+        return False, "Connection to Tally server timed out. Please try again.", []
+    except Exception as e:
+        return False, f"Error fetching companies: {str(e)}", []
+
 def get_synced_ledgers(email):
     """Retrieves synced ledgers from database for the given user."""
     conn = get_db_conn()
@@ -1988,6 +2091,8 @@ if "tally_server_port" not in st.session_state:
     st.session_state.tally_server_port = 9000
 if "tally_company_name" not in st.session_state:
     st.session_state.tally_company_name = ""
+if "detected_companies" not in st.session_state:
+    st.session_state.detected_companies = []
 if "enable_direct_sync" not in st.session_state:
     st.session_state.enable_direct_sync = False
 if "enable_direct_push_bank" not in st.session_state:
@@ -3481,12 +3586,38 @@ def render_settings_page():
                 help="Enter the port number for Tally ODBC connection (default: 9000)"
             )
 
-        st.text_input(
-            "Tally Company Name (for Direct Sync):",
-            value=st.session_state.tally_company_name,
-            key="tally_company_input",
-            help="Enter your Tally company name to sync ledgers directly from Tally"
-        )
+        # Company selection - use dropdown if companies are detected, otherwise show text input
+        if st.session_state.detected_companies:
+            # Add "Manual Entry" option to allow custom input
+            company_options = [""] + st.session_state.detected_companies + ["-- Manual Entry --"]
+
+            selected_company = st.selectbox(
+                "Tally Company Name (for Direct Sync):",
+                options=company_options,
+                index=company_options.index(st.session_state.tally_company_name) if st.session_state.tally_company_name in company_options else 0,
+                key="tally_company_select",
+                help="Select your Tally company name from detected companies. Click 'Test Connection' to detect companies from Tally."
+            )
+
+            # If "Manual Entry" is selected, show text input
+            if selected_company == "-- Manual Entry --":
+                st.session_state.tally_company_name = st.text_input(
+                    "Enter Company Name Manually:",
+                    value=st.session_state.tally_company_name if st.session_state.tally_company_name != "-- Manual Entry --" else "",
+                    key="tally_company_manual_input",
+                    help="Enter your Tally company name manually"
+                )
+            else:
+                st.session_state.tally_company_name = selected_company
+        else:
+            # No companies detected yet - show text input with info message
+            st.text_input(
+                "Tally Company Name (for Direct Sync):",
+                value=st.session_state.tally_company_name,
+                key="tally_company_input",
+                help="Enter your Tally company name or click 'Test Connection' to auto-detect from Tally"
+            )
+            st.info("💡 Click 'Test Connection' to auto-detect company names from Tally server")
 
         st.divider()
 
@@ -3531,6 +3662,11 @@ def render_settings_page():
         col1, col2, col3 = st.columns([2, 2, 1])
         with col1:
             if st.button("Save Tally Integration Settings", type="primary", use_container_width=True):
+                # Get company name from appropriate source (dropdown or text input)
+                company_name = st.session_state.tally_company_name
+                if not st.session_state.detected_companies and 'tally_company_input' in st.session_state:
+                    company_name = st.session_state.tally_company_input
+
                 conn = get_db_conn()
                 with conn.session as s:
                     s.execute(text('''
@@ -3552,7 +3688,7 @@ def render_settings_page():
                         email=st.session_state.email,
                         host=st.session_state.tally_host_input,
                         port=st.session_state.tally_port_input,
-                        company=st.session_state.tally_company_input,
+                        company=company_name,
                         sync=st.session_state.direct_sync_checkbox,
                         push_bank=st.session_state.direct_push_bank_checkbox,
                         push_journal=st.session_state.direct_push_journal_checkbox,
@@ -3563,7 +3699,7 @@ def render_settings_page():
                 # Update session state with saved values
                 st.session_state.tally_server_host = st.session_state.tally_host_input
                 st.session_state.tally_server_port = st.session_state.tally_port_input
-                st.session_state.tally_company_name = st.session_state.tally_company_input
+                st.session_state.tally_company_name = company_name
                 st.session_state.enable_direct_sync = st.session_state.direct_sync_checkbox
                 st.session_state.enable_direct_push_bank = st.session_state.direct_push_bank_checkbox
                 st.session_state.enable_direct_push_journal = st.session_state.direct_push_journal_checkbox
@@ -3573,7 +3709,22 @@ def render_settings_page():
 
         with col2:
             if st.button("Test Connection", use_container_width=True):
-                st.info("Connection test feature will be implemented in the next update.")
+                with st.spinner("Testing connection and detecting companies..."):
+                    success, message, companies = fetch_companies_from_tally(
+                        st.session_state.tally_host_input,
+                        st.session_state.tally_port_input
+                    )
+                    if success:
+                        st.session_state.detected_companies = companies
+                        st.success(message)
+                        if companies:
+                            st.info(f"📋 Detected companies: {', '.join(companies)}")
+                            # Auto-select first company if none selected
+                            if not st.session_state.tally_company_name and companies:
+                                st.session_state.tally_company_name = companies[0]
+                        st.rerun()
+                    else:
+                        st.error(message)
 
         with col3:
             if st.button("Sync Ledgers Now", use_container_width=True, type="secondary"):
