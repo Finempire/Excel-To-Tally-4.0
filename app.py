@@ -2661,8 +2661,16 @@ def render_journal_converter_page():
             <p style="color: #666; font-size: 1.1rem;">Convert CSV/Excel journals to Tally XML with intelligent mapping</p>
         </div>
     """, unsafe_allow_html=True)
-    
+
+    # Use tally_company_name if direct push is enabled, otherwise use company_name
+    enable_direct_push = st.session_state.get('enable_direct_push_journal', False)
+    tally_company_name = st.session_state.get('tally_company_name', '')
     company_name = st.session_state.get('company_name', 'Xml2Tally (Default Co.)')
+
+    # If direct push is enabled and tally_company_name is set, use it; otherwise fall back to company_name
+    if enable_direct_push and tally_company_name:
+        company_name = tally_company_name
+
     rules_config = st.session_state.get('bank_rules', [])
     ledger_master = st.session_state.get('ledger_master', ["Bank Suspense A/c (Default)"])
     suspense_ledger = st.session_state.get('default_suspense_ledger', "Bank Suspense A/c (Default)")
@@ -3020,8 +3028,16 @@ def render_bank_converter_page():
             <p style="color: #666; font-size: 1.1rem;">Convert bank statements to Tally XML format</p>
         </div>
     """, unsafe_allow_html=True)
-    
+
+    # Use tally_company_name if direct push is enabled, otherwise use company_name
+    enable_direct_push = st.session_state.get('enable_direct_push_bank', False)
+    tally_company_name = st.session_state.get('tally_company_name', '')
     company_name = st.session_state.get('company_name', 'Xml2Tally (Default Co.)')
+
+    # If direct push is enabled and tally_company_name is set, use it; otherwise fall back to company_name
+    if enable_direct_push and tally_company_name:
+        company_name = tally_company_name
+
     ledger_master = st.session_state.get('ledger_master', ["Bank Suspense A/c (Default)"])
     suspense_ledger = st.session_state.get('default_suspense_ledger', None)
     rules_config = st.session_state.get('bank_rules', [])
