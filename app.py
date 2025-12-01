@@ -1630,11 +1630,12 @@ def create_tally_xml(df, fixed_ledger_config, dynamic_ledger_config, company_nam
         try:
             date_obj = pd.to_datetime(row['Date'], dayfirst=True)
             tally_date = date_obj.strftime('%Y%m%d')
+            # Store tuples of (xml_string, transaction_type) for sorting
             ledger_entries_list = []
-            
+
             # Handle voucher number - replace NaN with empty string
             voucher_number = str(row['Voucher Number']) if pd.notna(row['Voucher Number']) else ""
-            
+
             for ledger in fixed_ledger_config:
                 if ledger['CSV Column Name'] in row and pd.notna(row[ledger['CSV Column Name']]):
                     amount_val = round(float(row[ledger['CSV Column Name']]), 2)
@@ -1643,12 +1644,14 @@ def create_tally_xml(df, fixed_ledger_config, dynamic_ledger_config, company_nam
                     amount_for_xml = amount_val if ledger['Type (Debit/Credit)'] == 'Credit' else amount_val * -1
                     # XML escape ledger name
                     ledger_name_safe = escape(str(ledger['Tally Ledger Name']))
-                    ledger_entries_list.append(ledger_line_template.format(
+                    ledger_xml = ledger_line_template.format(
                         ledger_name=ledger_name_safe,
                         is_positive=is_positive_flag,
                         amount=amount_for_xml
-                    ))
-            
+                    )
+                    # Store as tuple (xml, type) for sorting
+                    ledger_entries_list.append((ledger_xml, ledger['Type (Debit/Credit)']))
+
             for dyn_ledger in dynamic_ledger_config:
                 name_col = dyn_ledger['CSV Column for Ledger Name']
                 amount_col = dyn_ledger['CSV Column for Amount']
@@ -1679,14 +1682,20 @@ def create_tally_xml(df, fixed_ledger_config, dynamic_ledger_config, company_nam
                     # XML escape ledger name
                     ledger_name_safe = escape(str(final_ledger_name))
 
-                    ledger_entries_list.append(ledger_line_template.format(
+                    ledger_xml = ledger_line_template.format(
                         ledger_name=ledger_name_safe,
                         is_positive=is_positive_flag,
                         amount=amount_for_xml
-                    ))
+                    )
+                    # Store as tuple (xml, type) for sorting
+                    ledger_entries_list.append((ledger_xml, trans_type))
 
             if ledger_entries_list:
-                final_ledger_entries = "\n".join(ledger_entries_list)
+                # Sort entries: Debit first (priority 0), Credit second (priority 1)
+                ledger_entries_list.sort(key=lambda x: 0 if x[1] == 'Debit' else 1)
+                # Extract only the XML strings
+                sorted_ledger_xmls = [entry[0] for entry in ledger_entries_list]
+                final_ledger_entries = "\n".join(sorted_ledger_xmls)
                 # Safely get narration with proper type checking and XML escaping
                 narration_raw = row.get('Narration', 'N/A')
                 narration_safe = escape(str(narration_raw)) if pd.notna(narration_raw) else "N/A"
@@ -1762,21 +1771,16 @@ def create_bank_tally_xml(df, bank_ledger, company_name):
       <VOUCHERTYPENAME>{voucher_type}</VOUCHERTYPENAME>
       <NARRATION>{narration}</NARRATION>
       <PERSISTEDVIEW>Accounting Voucher View</PERSISTEDVIEW>
-      
-      <ALLLEDGERENTRIES.LIST>
-       <LEDGERNAME>{bank_ledger}</LEDGERNAME>
-       <ISDEEMEDPOSITIVE>{is_bank_positive}</ISDEEMEDPOSITIVE>
-       <AMOUNT>{bank_amount}</AMOUNT>
-      </ALLLEDGERENTRIES.LIST>
-      
-      <ALLLEDGERENTRIES.LIST>
-       <LEDGERNAME>{contra_ledger}</LEDGERNAME>
-       <ISDEEMEDPOSITIVE>{is_contra_positive}</ISDEEMEDPOSITIVE>
-       <AMOUNT>{contra_amount}</AMOUNT>
-      </ALLLEDGERENTRIES.LIST>
-      
+      {ledger_entries}
      </VOUCHER>
     </TALLYMESSAGE>"""
+
+    ledger_entry_template = """
+      <ALLLEDGERENTRIES.LIST>
+       <LEDGERNAME>{ledger_name}</LEDGERNAME>
+       <ISDEEMEDPOSITIVE>{is_positive}</ISDEEMEDPOSITIVE>
+       <AMOUNT>{amount}</AMOUNT>
+      </ALLLEDGERENTRIES.LIST>"""
     all_tally_messages = []
     for index, row in df.iterrows():
         narration = "N/A"  # Initialize before try block to avoid NameError in exception handler
@@ -1786,39 +1790,61 @@ def create_bank_tally_xml(df, bank_ledger, company_name):
             narration = str(row['Narration'])
             debit = round(float(row['Debit']), 2)
             credit = round(float(row['Credit']), 2)
-            
-            mapped_ledger = row['Mapped Ledger'] 
-            
+
+            mapped_ledger = row['Mapped Ledger']
+
             if debit > 0:
                 voucher_type = "Payment"
-                bank_amount = debit 
-                contra_amount = debit * -1 
+                bank_amount = debit
+                contra_amount = debit * -1
                 is_bank_positive = "No"
                 is_contra_positive = "Yes"
             elif credit > 0:
                 voucher_type = "Receipt"
-                bank_amount = credit * -1 
-                contra_amount = credit 
+                bank_amount = credit * -1
+                contra_amount = credit
                 is_bank_positive = "Yes"
                 is_contra_positive = "No"
             else:
-                continue 
+                continue
             # XML escape narration and ledger names
             narration_safe = escape(str(narration)) if pd.notna(narration) else "N/A"
             bank_ledger_safe = escape(str(bank_ledger))
             mapped_ledger_safe = escape(str(mapped_ledger))
+
+            # Create ledger entries list with tuples (xml, is_debit_flag)
+            ledger_list = []
+
+            # Bank ledger entry
+            bank_entry_xml = ledger_entry_template.format(
+                ledger_name=bank_ledger_safe,
+                is_positive=is_bank_positive,
+                amount=bank_amount
+            )
+            # is_bank_positive="Yes" means debit
+            ledger_list.append((bank_entry_xml, is_bank_positive == "Yes"))
+
+            # Contra ledger entry
+            contra_entry_xml = ledger_entry_template.format(
+                ledger_name=mapped_ledger_safe,
+                is_positive=is_contra_positive,
+                amount=contra_amount
+            )
+            # is_contra_positive="Yes" means debit
+            ledger_list.append((contra_entry_xml, is_contra_positive == "Yes"))
+
+            # Sort: Debit entries (True) first, Credit entries (False) second
+            ledger_list.sort(key=lambda x: not x[1])  # not x[1] puts True before False
+
+            # Extract sorted XML strings
+            sorted_ledger_entries = "\n".join([entry[0] for entry in ledger_list])
 
             all_tally_messages.append(
                 voucher_template.format(
                     voucher_type=voucher_type,
                     date=tally_date,
                     narration=narration_safe,
-                    bank_ledger=bank_ledger_safe,
-                    is_bank_positive=is_bank_positive,
-                    bank_amount=bank_amount,
-                    contra_ledger=mapped_ledger_safe,
-                    is_contra_positive=is_contra_positive,
-                    contra_amount=contra_amount
+                    ledger_entries=sorted_ledger_entries
                 )
             )
         except Exception as e:
