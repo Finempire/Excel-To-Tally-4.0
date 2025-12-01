@@ -1936,6 +1936,47 @@ def sync_ledgers_from_tally(host, port, company_name, email):
     except Exception as e:
         return False, f"Error syncing ledgers: {str(e)}", 0
 
+def push_vouchers_to_tally(xml_data, host, port):
+    """
+    Pushes vouchers directly to Tally server via HTTP POST.
+    Returns tuple (success: bool, message: str, voucher_count: int)
+    """
+    try:
+        # Send XML data to Tally server
+        url = f"http://{host}:{port}"
+        headers = {'Content-Type': 'text/xml'}
+
+        response = requests.post(url, data=xml_data, headers=headers, timeout=30)
+
+        if response.status_code != 200:
+            return False, f"Tally server returned error: {response.status_code}", 0
+
+        # Parse response to check for errors
+        try:
+            root = ET.fromstring(response.text)
+
+            # Check for errors in response
+            error_elem = root.find('.//ERROR')
+            if error_elem is not None and error_elem.text:
+                return False, f"Tally import error: {error_elem.text}", 0
+
+            # Count number of vouchers in the XML
+            voucher_count = xml_data.count('<TALLYMESSAGE')
+
+            return True, f"Successfully pushed {voucher_count} vouchers to Tally", voucher_count
+
+        except ET.ParseError:
+            # If we can't parse the response but got 200 status, assume success
+            voucher_count = xml_data.count('<TALLYMESSAGE')
+            return True, f"Successfully pushed {voucher_count} vouchers to Tally", voucher_count
+
+    except requests.exceptions.ConnectionError:
+        return False, f"Could not connect to Tally server at {host}:{port}. Please ensure Tally is running with web server enabled.", 0
+    except requests.exceptions.Timeout:
+        return False, "Connection to Tally server timed out. Please try again.", 0
+    except Exception as e:
+        return False, f"Error pushing vouchers to Tally: {str(e)}", 0
+
 def fetch_companies_from_tally(host, port):
     """
     Fetches list of company names from Tally server.
@@ -2784,47 +2825,136 @@ def render_journal_converter_page():
                     edited_mappings[name_col] = edited_df
             
             st.divider()
-            
+
             # Final Actions
-            if st.button(f"Convert to Tally {voucher_type} XML", type="primary", use_container_width=True):
-                # Automatically learn from user mappings when they generate XML
-                learned_count = 0
-                for col_name, mapping_df in edited_mappings.items():
-                    for _index, row in mapping_df.iterrows():
-                        csv_value = row['CSV Value']
-                        mapped_ledger = row['Mapped Ledger']
-                        
-                        if mapped_ledger != suspense_ledger:
-                            confidence = 90  # Default high confidence for manual mappings
-                            update_learned_mappings(
-                                st.session_state.email, 
-                                csv_value, 
-                                mapped_ledger, 
-                                confidence
-                            )
-                            learned_count += 1
-                
-                if learned_count > 0:
-                    st.success(f"🧠 AI learned from {learned_count} mappings for future use!")
-                
-                with st.spinner("Generating Tally XML..."):
-                    xml_data = create_tally_xml(
-                        df,
-                        fixed_rules,
-                        dynamic_rules,
-                        company_name,
-                        voucher_type,
-                        edited_mappings
+            # Check if direct push is enabled
+            enable_direct_push = st.session_state.get('enable_direct_push_journal', False)
+
+            if enable_direct_push:
+                # Show Direct Push button as primary action
+                if st.button(f"🚀 Direct Push to Tally", type="primary", use_container_width=True):
+                    # Automatically learn from user mappings
+                    learned_count = 0
+                    for col_name, mapping_df in edited_mappings.items():
+                        for _index, row in mapping_df.iterrows():
+                            csv_value = row['CSV Value']
+                            mapped_ledger = row['Mapped Ledger']
+
+                            if mapped_ledger != suspense_ledger:
+                                confidence = 90
+                                update_learned_mappings(
+                                    st.session_state.email,
+                                    csv_value,
+                                    mapped_ledger,
+                                    confidence
+                                )
+                                learned_count += 1
+
+                    if learned_count > 0:
+                        st.success(f"🧠 AI learned from {learned_count} mappings for future use!")
+
+                    with st.spinner("Pushing vouchers to Tally..."):
+                        xml_data = create_tally_xml(
+                            df,
+                            fixed_rules,
+                            dynamic_rules,
+                            company_name,
+                            voucher_type,
+                            edited_mappings
+                        )
+
+                        success, message, count = push_vouchers_to_tally(
+                            xml_data,
+                            st.session_state.tally_server_host,
+                            st.session_state.tally_server_port
+                        )
+
+                    if success:
+                        st.success(f"✅ {message}")
+                    else:
+                        st.error(f"❌ {message}")
+
+                # Show Download XML as secondary option
+                if st.button(f"📥 Download {voucher_type} XML (Backup)", use_container_width=True):
+                    # Automatically learn from user mappings
+                    learned_count = 0
+                    for col_name, mapping_df in edited_mappings.items():
+                        for _index, row in mapping_df.iterrows():
+                            csv_value = row['CSV Value']
+                            mapped_ledger = row['Mapped Ledger']
+
+                            if mapped_ledger != suspense_ledger:
+                                confidence = 90
+                                update_learned_mappings(
+                                    st.session_state.email,
+                                    csv_value,
+                                    mapped_ledger,
+                                    confidence
+                                )
+                                learned_count += 1
+
+                    if learned_count > 0:
+                        st.success(f"🧠 AI learned from {learned_count} mappings for future use!")
+
+                    with st.spinner("Generating Tally XML..."):
+                        xml_data = create_tally_xml(
+                            df,
+                            fixed_rules,
+                            dynamic_rules,
+                            company_name,
+                            voucher_type,
+                            edited_mappings
+                        )
+
+                    st.success("Tally XML generated successfully!")
+                    st.download_button(
+                        label=f"📥 Download {voucher_type}Vouchers.xml",
+                        data=xml_data,
+                        file_name=f"{voucher_type}Vouchers.xml",
+                        mime="application/xml",
+                        use_container_width=True
                     )
-                
-                st.success("Tally XML generated successfully!")
-                st.download_button(
-                    label=f"📥 Download {voucher_type}Vouchers.xml",
-                    data=xml_data,
-                    file_name=f"{voucher_type}Vouchers.xml",
-                    mime="application/xml",
-                    use_container_width=True
-                )
+            else:
+                # Show only Generate XML button when direct push is disabled
+                if st.button(f"Convert to Tally {voucher_type} XML", type="primary", use_container_width=True):
+                    # Automatically learn from user mappings when they generate XML
+                    learned_count = 0
+                    for col_name, mapping_df in edited_mappings.items():
+                        for _index, row in mapping_df.iterrows():
+                            csv_value = row['CSV Value']
+                            mapped_ledger = row['Mapped Ledger']
+
+                            if mapped_ledger != suspense_ledger:
+                                confidence = 90  # Default high confidence for manual mappings
+                                update_learned_mappings(
+                                    st.session_state.email,
+                                    csv_value,
+                                    mapped_ledger,
+                                    confidence
+                                )
+                                learned_count += 1
+
+                    if learned_count > 0:
+                        st.success(f"🧠 AI learned from {learned_count} mappings for future use!")
+
+                    with st.spinner("Generating Tally XML..."):
+                        xml_data = create_tally_xml(
+                            df,
+                            fixed_rules,
+                            dynamic_rules,
+                            company_name,
+                            voucher_type,
+                            edited_mappings
+                        )
+
+                    st.success("Tally XML generated successfully!")
+                    st.download_button(
+                        label=f"📥 Download {voucher_type}Vouchers.xml",
+                        data=xml_data,
+                        file_name=f"{voucher_type}Vouchers.xml",
+                        mime="application/xml",
+                        use_container_width=True
+                    )
                     
         except Exception as e:
             st.error(f"Error processing file: {e}")
@@ -3038,42 +3168,121 @@ def render_bank_converter_page():
             )
 
             st.divider()
-            
+
             # Final Actions
-            if st.button("Generate Tally XML", type="primary", use_container_width=True):
-                # Automatically learn from user mappings when they generate XML
-                learned_count = 0
-                for index, row in edited_df.iterrows():
-                    narration = str(row['Narration'])
-                    mapped_ledger = row['Mapped Ledger']
-                    
-                    if mapped_ledger != suspense_ledger:
-                        update_learned_mappings(
-                            st.session_state.email, 
-                            narration, 
-                            mapped_ledger, 
-                            90  # High confidence for manual mappings
+            # Check if direct push is enabled
+            enable_direct_push = st.session_state.get('enable_direct_push_bank', False)
+
+            if enable_direct_push:
+                # Show Direct Push button as primary action
+                if st.button("🚀 Direct Push to Tally", type="primary", use_container_width=True):
+                    # Automatically learn from user mappings
+                    learned_count = 0
+                    for index, row in edited_df.iterrows():
+                        narration = str(row['Narration'])
+                        mapped_ledger = row['Mapped Ledger']
+
+                        if mapped_ledger != suspense_ledger:
+                            update_learned_mappings(
+                                st.session_state.email,
+                                narration,
+                                mapped_ledger,
+                                90
+                            )
+                            learned_count += 1
+
+                    if learned_count > 0:
+                        st.success(f"🧠 AI learned from {learned_count} mappings for future suggestions!")
+
+                    with st.spinner("Pushing bank vouchers to Tally..."):
+                        xml_data = create_bank_tally_xml(
+                            edited_df,
+                            bank_ledger,
+                            company_name
                         )
-                        learned_count += 1
-                
-                if learned_count > 0:
-                    st.success(f"🧠 AI learned from {learned_count} mappings for future suggestions!")
-                
-                with st.spinner("Generating Tally XML..."):
-                    xml_data = create_bank_tally_xml(
-                        edited_df,
-                        bank_ledger,
-                        company_name
+
+                        success, message, count = push_vouchers_to_tally(
+                            xml_data,
+                            st.session_state.tally_server_host,
+                            st.session_state.tally_server_port
+                        )
+
+                    if success:
+                        st.success(f"✅ {message}")
+                    else:
+                        st.error(f"❌ {message}")
+
+                # Show Download XML as secondary option
+                if st.button("📥 Download Bank XML (Backup)", use_container_width=True):
+                    # Automatically learn from user mappings
+                    learned_count = 0
+                    for index, row in edited_df.iterrows():
+                        narration = str(row['Narration'])
+                        mapped_ledger = row['Mapped Ledger']
+
+                        if mapped_ledger != suspense_ledger:
+                            update_learned_mappings(
+                                st.session_state.email,
+                                narration,
+                                mapped_ledger,
+                                90
+                            )
+                            learned_count += 1
+
+                    if learned_count > 0:
+                        st.success(f"🧠 AI learned from {learned_count} mappings for future suggestions!")
+
+                    with st.spinner("Generating Tally XML..."):
+                        xml_data = create_bank_tally_xml(
+                            edited_df,
+                            bank_ledger,
+                            company_name
+                        )
+
+                    st.success("Tally XML generated successfully!")
+                    st.download_button(
+                        label="📥 Download BankVouchers.xml",
+                        data=xml_data,
+                        file_name="BankVouchers.xml",
+                        mime="application/xml",
+                        use_container_width=True
                     )
-                
-                st.success("Tally XML generated successfully!")
-                st.download_button(
-                    label="📥 Download BankVouchers.xml",
-                    data=xml_data,
-                    file_name="BankVouchers.xml",
-                    mime="application/xml",
-                    use_container_width=True
-                )
+            else:
+                # Show only Generate XML button when direct push is disabled
+                if st.button("Generate Tally XML", type="primary", use_container_width=True):
+                    # Automatically learn from user mappings when they generate XML
+                    learned_count = 0
+                    for index, row in edited_df.iterrows():
+                        narration = str(row['Narration'])
+                        mapped_ledger = row['Mapped Ledger']
+
+                        if mapped_ledger != suspense_ledger:
+                            update_learned_mappings(
+                                st.session_state.email,
+                                narration,
+                                mapped_ledger,
+                                90  # High confidence for manual mappings
+                            )
+                            learned_count += 1
+
+                    if learned_count > 0:
+                        st.success(f"🧠 AI learned from {learned_count} mappings for future suggestions!")
+
+                    with st.spinner("Generating Tally XML..."):
+                        xml_data = create_bank_tally_xml(
+                            edited_df,
+                            bank_ledger,
+                            company_name
+                        )
+
+                    st.success("Tally XML generated successfully!")
+                    st.download_button(
+                        label="📥 Download BankVouchers.xml",
+                        data=xml_data,
+                        file_name="BankVouchers.xml",
+                        mime="application/xml",
+                        use_container_width=True
+                    )
                     
         except Exception as e:
             st.error(f"Error processing bank statement: {e}")
