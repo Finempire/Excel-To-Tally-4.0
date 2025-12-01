@@ -2922,7 +2922,7 @@ def render_journal_converter_page():
                     st.download_button(
                         label="📥 Download Sent XML (for debugging)",
                         data=xml_data,
-                        file_name=f"tally_{voucher_type}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.xml",
+                        file_name=f"tally_{voucher_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xml",
                         mime="text/xml",
                         help="Download the exact XML that was sent to Tally for debugging"
                     )
@@ -3269,7 +3269,7 @@ def render_bank_converter_page():
                     st.download_button(
                         label="📥 Download Sent XML (for debugging)",
                         data=xml_data,
-                        file_name=f"tally_bank_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.xml",
+                        file_name=f"tally_bank_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xml",
                         mime="text/xml",
                         help="Download the exact XML that was sent to Tally for debugging"
                     )
