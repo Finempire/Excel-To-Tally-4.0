@@ -1951,24 +1951,68 @@ def push_vouchers_to_tally(xml_data, host, port):
         if response.status_code != 200:
             return False, f"Tally server returned error: {response.status_code}", 0
 
-        # Parse response to check for errors
+        # Count how many vouchers we attempted to send
+        vouchers_sent = xml_data.count('<TALLYMESSAGE')
+
+        # Parse response to check for errors and actual success
         try:
             root = ET.fromstring(response.text)
 
-            # Check for errors in response
+            # Log the response for debugging (to console/logs)
+            st.write("### 🔍 Tally Response Debug Info")
+            st.text(response.text[:2000])  # Show first 2000 chars of response
+
+            # Check for general ERROR element
             error_elem = root.find('.//ERROR')
-            if error_elem is not None and error_elem.text:
+            if error_elem is not None and error_elem.text and error_elem.text.strip():
                 return False, f"Tally import error: {error_elem.text}", 0
 
-            # Count number of vouchers in the XML
-            voucher_count = xml_data.count('<TALLYMESSAGE')
+            # Check for LINEERROR elements (per-voucher errors)
+            line_errors = root.findall('.//LINEERROR')
+            if line_errors:
+                error_details = []
+                for idx, err in enumerate(line_errors[:5], 1):  # Show first 5 errors
+                    error_details.append(f"  {idx}. {err.text}")
+                error_msg = "Tally rejected vouchers with errors:\n" + "\n".join(error_details)
+                if len(line_errors) > 5:
+                    error_msg += f"\n  ... and {len(line_errors) - 5} more errors"
+                return False, error_msg, 0
 
-            return True, f"Successfully pushed {voucher_count} vouchers to Tally", voucher_count
+            # Check for CREATED count in response (Tally's confirmation)
+            created_elem = root.find('.//CREATED')
+            if created_elem is not None and created_elem.text:
+                try:
+                    created_count = int(created_elem.text)
+                    if created_count == 0:
+                        return False, "Tally accepted the request but created 0 vouchers. Please check:\n- Company name is correct\n- All ledger names exist in Tally\n- Voucher numbers are not duplicates", 0
+                    elif created_count < vouchers_sent:
+                        return False, f"⚠️ Partial success: {created_count} out of {vouchers_sent} vouchers created. Some vouchers may have validation errors.", created_count
+                    else:
+                        return True, f"✅ Successfully created {created_count} vouchers in Tally", created_count
+                except ValueError:
+                    pass
 
-        except ET.ParseError:
-            # If we can't parse the response but got 200 status, assume success
-            voucher_count = xml_data.count('<TALLYMESSAGE')
-            return True, f"Successfully pushed {voucher_count} vouchers to Tally", voucher_count
+            # Check for LASTVCHID (indicates successful voucher creation)
+            last_vch_id = root.find('.//LASTVCHID')
+            if last_vch_id is not None and last_vch_id.text:
+                return True, f"Successfully pushed {vouchers_sent} vouchers to Tally (Last Voucher ID: {last_vch_id.text})", vouchers_sent
+
+            # If response has IMPORTRESULT with status
+            import_result = root.find('.//IMPORTRESULT')
+            if import_result is not None:
+                status = import_result.find('.//STATUS')
+                if status is not None and status.text:
+                    if status.text.upper() == 'SUCCESS':
+                        return True, f"Successfully pushed {vouchers_sent} vouchers to Tally", vouchers_sent
+                    else:
+                        return False, f"Tally import status: {status.text}", 0
+
+            # If we got HTTP 200 but can't find success indicators, this is suspicious
+            return False, f"⚠️ Uncertain result: Tally returned HTTP 200 but no confirmation of voucher creation. Response may not contain expected elements. Please check Tally manually.", 0
+
+        except ET.ParseError as parse_err:
+            # If we can't parse the response, show it to user for debugging
+            return False, f"Could not parse Tally response. Raw response:\n{response.text[:500]}\n\nParse error: {str(parse_err)}", 0
 
     except requests.exceptions.ConnectionError:
         return False, f"Could not connect to Tally server at {host}:{port}. Please ensure Tally is running with web server enabled.", 0
@@ -2874,6 +2918,15 @@ def render_journal_converter_page():
                     else:
                         st.error(f"❌ {message}")
 
+                    # Provide XML download for debugging
+                    st.download_button(
+                        label="📥 Download Sent XML (for debugging)",
+                        data=xml_data,
+                        file_name=f"tally_{voucher_type}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.xml",
+                        mime="text/xml",
+                        help="Download the exact XML that was sent to Tally for debugging"
+                    )
+
                 # Show Download XML as secondary option
                 if st.button(f"📥 Download {voucher_type} XML (Backup)", use_container_width=True):
                     # Automatically learn from user mappings
@@ -3211,6 +3264,15 @@ def render_bank_converter_page():
                         st.success(f"✅ {message}")
                     else:
                         st.error(f"❌ {message}")
+
+                    # Provide XML download for debugging
+                    st.download_button(
+                        label="📥 Download Sent XML (for debugging)",
+                        data=xml_data,
+                        file_name=f"tally_bank_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.xml",
+                        mime="text/xml",
+                        help="Download the exact XML that was sent to Tally for debugging"
+                    )
 
                 # Show Download XML as secondary option
                 if st.button("📥 Download Bank XML (Backup)", use_container_width=True):
