@@ -677,11 +677,11 @@ We do not sell, trade, or rent your personal information to third parties. We ma
 * **Law Enforcement:** If required by law or to respond to valid legal processes.
 
 ### 5. Your Rights
-You have the right to access, correct, or delete your personal information. Please contact us at **support@xml2tally.in** to make such a request.
+You have the right to access, correct, or delete your personal information. Please contact us at <strong style="white-space: nowrap;">support@xml2tally.in</strong> to make such a request.
 
 ### 6. Contact Us
 If you have any questions about this Privacy Policy, please contact us at:
-**support@xml2tally.in**
+<strong style="white-space: nowrap;">support@xml2tally.in</strong>
 """
 TERMS_POLICY_TEXT = """
 ## Terms & Conditions
