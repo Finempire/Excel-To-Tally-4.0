@@ -1262,8 +1262,78 @@ class EnhancedLedgerMapper:
         # Remove extra spaces and special characters, but keep meaningful words
         narration_str = re.sub(r'[^a-zA-Z0-9\s]', ' ', narration_str)
         narration_str = re.sub(r'\s+', ' ', narration_str).strip()
-        
+
         return narration_str
+
+    def build_ledger_keyword_index(self, ledger_master):
+        """Prepare searchable keyword sets from ledger names"""
+        noise_words = {
+            'account', 'a/c', 'ac', 'ledger', 'bank', 'cash', 'general',
+            'misc', 'miscellaneous', 'expense', 'expenses', 'and', '&'
+        }
+
+        keyword_synonyms = {
+            'fuel': {'petrol', 'diesel', 'gas', 'cng'},
+            'petrol': {'fuel', 'diesel', 'gas', 'cng'},
+            'diesel': {'fuel', 'petrol', 'gas', 'cng'},
+            'rent': {'lease'},
+            'salary': {'payroll', 'wages', 'wage'},
+            'travel': {'transport', 'conveyance'},
+            'vendor': {'supplier', 'contractor'},
+            'client': {'customer', 'debtor'},
+            'gst': {'tax'},
+            'tds': {'tax'},
+        }
+
+        ledger_index = []
+
+        for ledger in ledger_master:
+            clean_ledger = self.preprocess_narration(ledger)
+            ledger_words = [word for word in clean_ledger.lower().split() if word and word not in noise_words]
+
+            expanded_keywords = set(ledger_words)
+            for word in ledger_words:
+                expanded_keywords.update(keyword_synonyms.get(word, set()))
+
+            ledger_index.append({
+                'ledger': ledger,
+                'clean': clean_ledger,
+                'keywords': expanded_keywords
+            })
+
+        return ledger_index
+
+    def ledger_name_focus_match(self, narration, ledger_master):
+        """Prioritize matches that align closely with ledger names"""
+        clean_narration = self.preprocess_narration(narration)
+        narration_words = set(clean_narration.lower().split()) if clean_narration else set()
+
+        if not narration_words or not ledger_master:
+            return None, 0
+
+        ledger_index = self.build_ledger_keyword_index(ledger_master)
+        best_ledger = None
+        best_score = 0
+
+        for entry in ledger_index:
+            overlap = narration_words.intersection(entry['keywords'])
+            overlap_score = len(overlap) * 22  # Boost for strong keyword overlap
+
+            name_similarity = self.calculate_string_similarity(clean_narration, entry['clean'])
+            similarity_score = name_similarity * 60
+
+            partial_bonus = 20 if entry['clean'] and entry['clean'] in clean_narration else 0
+
+            combined_score = overlap_score + similarity_score + partial_bonus
+
+            if combined_score > best_score and (overlap or name_similarity >= 0.55):
+                best_score = combined_score
+                best_ledger = entry['ledger']
+
+        if best_ledger:
+            return best_ledger, min(95, best_score)
+
+        return None, 0
     
     def compute_ledger_embeddings(self, ledger_master):
         """Compute embeddings for the ledger master"""
@@ -1424,13 +1494,18 @@ class EnhancedLedgerMapper:
         if keyword_match and keyword_score >= 50:
             return keyword_match, keyword_score, "keyword_match"
 
-        # Strategy 5: Semantic AI matching
+        # Strategy 5: Match based on ledger-name keywords and overlaps
+        ledger_focus_match, ledger_focus_score = self.ledger_name_focus_match(narration_str, ledger_master)
+        if ledger_focus_match and ledger_focus_score >= 55:
+            return ledger_focus_match, ledger_focus_score, "ledger_name_focus"
+
+        # Strategy 6: Semantic AI matching
         if self.initialized:
             semantic_match, semantic_score = self.semantic_similarity_match(narration_str, threshold=0.3)
             if semantic_match and semantic_score >= 35:
                 return semantic_match, semantic_score, "semantic_ai"
 
-        # Strategy 6: Category-based fallback with name suggestion
+        # Strategy 7: Category-based fallback with name suggestion
         category = self.categorize_transaction(narration_str)
         category_ledgers = {
             'salary': [ledger for ledger in ledger_master if any(word in ledger.lower() for word in ['salary', 'employee', 'staff'])],
