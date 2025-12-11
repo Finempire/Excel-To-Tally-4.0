@@ -3492,7 +3492,7 @@ def render_settings_page():
         </div>
     """, unsafe_allow_html=True)
     
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Company", "Journals", "Bank Rules", "AI Settings", "Tally Integration"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Company", "Journals", "AI Settings", "Tally Integration"])
 
     with tab1:
         st.subheader("Company Settings")
@@ -3675,213 +3675,6 @@ def render_settings_page():
                     st.rerun()
 
     with tab3:
-        st.subheader("Bank Reconciliation Settings")
-        
-        # Ledger Master Options
-        st.markdown("#### 1. Setup Ledger Master")
-        st.write("Choose how you want to provide your Tally ledger information:")
-        
-        ledger_option = st.radio(
-            "Select ledger input method:",
-            ["Upload Tally Ledger Master", "Enter Ledgers Manually"],
-            horizontal=True
-        )
-        
-        if ledger_option == "Upload Tally Ledger Master":
-            # Existing file upload functionality
-            st.markdown("##### Upload Ledger Master")
-            st.write("Export your 'List of Accounts' from Tally and upload it here.")
-            
-            ledger_file = st.file_uploader("Upload Tally Ledger Master", type=["csv", "xlsx"], key="ledger_master_uploader")
-            
-            if ledger_file:
-                try:
-                    df = pd.read_csv(ledger_file, encoding='latin1') if ledger_file.name.endswith('.csv') else pd.read_excel(ledger_file)
-                    df.columns = [str(c).strip().title() for c in df.columns] 
-                    
-                    if 'Ledger Name' not in df.columns:
-                        st.error("File must have a column named 'Ledger Name'. Please check your export.")
-                    else:
-                        ledgers_list = df['Ledger Name'].dropna().astype(str).unique().tolist()
-                        ledgers_list.sort() 
-                        
-                        conn = get_db_conn()
-                        with conn.session as s:
-                            s.execute(text('DELETE FROM bank_ledger_master WHERE email = :email'), params=dict(email=st.session_state.email))
-                            for ledger in ledgers_list:
-                                s.execute(text('INSERT INTO bank_ledger_master (email, ledger_name) VALUES (:email, :ledger)'), params=dict(email=st.session_state.email, ledger=ledger))
-                            s.commit()
-                        
-                        st.session_state.ledger_master = ledgers_list 
-                        st.success(f"Successfully uploaded {len(ledgers_list)} ledgers!")
-                        
-                except Exception as e:
-                    st.error(f"Error uploading ledger master: {e}")
-        
-        else:  # Manual entry
-            st.markdown("##### Enter Ledgers Manually")
-            st.write("Add your Tally ledger names one by one:")
-            
-            # Initialize manual ledgers in session state if not exists
-            if 'manual_ledgers' not in st.session_state:
-                st.session_state.manual_ledgers = st.session_state.get('ledger_master', []).copy()
-                # Remove default ledger if present
-                if "Bank Suspense A/c (Default)" in st.session_state.manual_ledgers:
-                    st.session_state.manual_ledgers.remove("Bank Suspense A/c (Default)")
-            
-            # Manual ledger entry
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                new_ledger = st.text_input("Add new ledger:", placeholder="Enter ledger name (e.g., Cash A/c, Sales A/c)")
-            with col2:
-                st.write("")  # Spacing
-                if st.button("➕ Add", use_container_width=True):
-                    if new_ledger and new_ledger.strip():
-                        if new_ledger.strip() not in st.session_state.manual_ledgers:
-                            st.session_state.manual_ledgers.append(new_ledger.strip())
-                            st.session_state.manual_ledgers.sort()
-                            st.rerun()
-                        else:
-                            st.warning("Ledger already exists!")
-                    else:
-                        st.warning("Please enter a ledger name")
-            
-            # Display and manage current ledgers
-            if st.session_state.manual_ledgers:
-                st.write(f"**Current Ledgers ({len(st.session_state.manual_ledgers)}):**")
-                
-                # Create a dataframe for better display and editing
-                ledger_df = pd.DataFrame({
-                    'Ledger Name': st.session_state.manual_ledgers
-                })
-                
-                edited_ledger_df = st.data_editor(
-                    ledger_df,
-                    num_rows="dynamic",
-                    column_config={
-                        "Ledger Name": st.column_config.TextColumn(
-                            "Ledger Name",
-                            help="Tally ledger name",
-                            required=True
-                        )
-                    },
-                    use_container_width=True,
-                    key="manual_ledger_editor"
-                )
-                
-                # Update session state with edited data
-                if not edited_ledger_df.empty:
-                    updated_ledgers = edited_ledger_df['Ledger Name'].dropna().tolist()
-                    updated_ledgers = [ledger.strip() for ledger in updated_ledgers if ledger.strip()]
-                    updated_ledgers.sort()
-                    st.session_state.manual_ledgers = updated_ledgers
-                
-                # Save manual ledgers button
-                if st.button("Save Manual Ledgers", use_container_width=True):
-                    if st.session_state.manual_ledgers:
-                        conn = get_db_conn()
-                        with conn.session as s:
-                            s.execute(text('DELETE FROM bank_ledger_master WHERE email = :email'), params=dict(email=st.session_state.email))
-                            for ledger in st.session_state.manual_ledgers:
-                                s.execute(text('INSERT INTO bank_ledger_master (email, ledger_name) VALUES (:email, :ledger)'), params=dict(email=st.session_state.email, ledger=ledger))
-                            s.commit()
-                        
-                        st.session_state.ledger_master = st.session_state.manual_ledgers.copy()
-                        st.success(f"Successfully saved {len(st.session_state.manual_ledgers)} ledgers!")
-                    else:
-                        st.error("No ledgers to save!")
-            else:
-                st.info("No ledgers added yet. Use the form above to add your Tally ledger names.")
-        
-        st.divider()
-        
-        # Suspense Ledger
-        st.markdown("#### 2. Set Default Suspense Ledger")
-        st.write("Transactions that can't be automatically matched will go to this ledger.")
-        
-        # Get current ledger options (either from uploaded or manual)
-        current_ledgers = st.session_state.get('ledger_master', [])
-        if not current_ledgers or current_ledgers == ["Bank Suspense A/c (Default)"]:
-            st.warning("Please setup your Ledger Master above to select a suspense account.")
-        else:
-            current_suspense = st.session_state.default_suspense_ledger
-            # Ensure current suspense is in the list, if not add it
-            if current_suspense not in current_ledgers:
-                current_ledgers.insert(0, current_suspense)
-            
-            suspense_index = current_ledgers.index(current_suspense) if current_suspense in current_ledgers else 0
-            
-            st.selectbox(
-                "Default Suspense Account:",
-                options=current_ledgers,
-                index=suspense_index,
-                key="suspense_ledger_select"
-            )
-
-        st.divider()
-        
-        # Smart Rules
-        st.markdown("#### 3. Configure Smart Rules")
-        st.write("Create rules to automatically map specific keywords to Tally ledgers.")
-        
-        if not st.session_state.bank_rules:
-            st.session_state.bank_rules = [{'Narration Keyword': '', 'Mapped Ledger': ''}]
-        
-        rules_df = pd.DataFrame(st.session_state.bank_rules)
-        
-        # Get current ledger options for dropdown
-        current_ledgers = st.session_state.get('ledger_master', ["Bank Suspense A/c (Default)"])
-        
-        edited_rules_df = st.data_editor(
-            rules_df,
-            num_rows="dynamic",
-            column_config={
-                "Narration Keyword": st.column_config.TextColumn(
-                    "Keyword to Match", 
-                    help="e.g., 'AMAZON' or 'RENT' - will match if narration contains this keyword",
-                    required=True
-                ),
-                "Mapped Ledger": st.column_config.SelectboxColumn(
-                    "Mapped Ledger",
-                    help="Select the Tally ledger to map when keyword is found",
-                    options=current_ledgers,
-                    required=True
-                )
-            },
-            use_container_width=True,
-            key="bank_rules_editor"
-        )
-        
-        if st.button("Save All Bank Settings", type="primary", use_container_width=True):
-            # Save all bank settings
-            rules_to_save = edited_rules_df.to_dict('records')
-
-            conn = get_db_conn()
-            with conn.session as s:
-                # Update suspense ledger (if it was configured)
-                new_suspense = st.session_state.get('suspense_ledger_select', st.session_state.default_suspense_ledger)
-                s.execute(text('''
-                    INSERT INTO user_preferences (email, default_suspense_ledger) VALUES (:email, :suspense)
-                    ON CONFLICT(email) DO UPDATE SET default_suspense_ledger = :suspense
-                '''), params=dict(email=st.session_state.email, suspense=new_suspense))
-                
-                # Save smart rules
-                s.execute(text('DELETE FROM bank_rules WHERE email = :email'), params=dict(email=st.session_state.email))
-                
-                for rule in rules_to_save:
-                    s.execute(text('''
-                        INSERT INTO bank_rules (email, keyword, mapped_ledger) 
-                        VALUES (:email, :keyword, :ledger)
-                    '''), params=dict(email=st.session_state.email, keyword=rule['Narration Keyword'], ledger=rule['Mapped Ledger']))
-                
-                s.commit()
-            
-            st.session_state.default_suspense_ledger = new_suspense
-            st.session_state.bank_rules = rules_to_save
-            st.success("All bank settings saved successfully!")
-            st.rerun()
-
-    with tab4:
         st.subheader("AI Learning & Configuration")
         
         # AI Status
@@ -3962,7 +3755,7 @@ def render_settings_page():
         else:
             st.info("No learned mappings yet. The AI will start learning automatically as you map transactions in the Journal and Bank converters.")
 
-    with tab5:
+    with tab4:
         st.subheader("Tally Direct Integration")
         st.markdown("""
             <div style="background-color: #e8f4f8; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;">
@@ -4134,6 +3927,33 @@ def render_settings_page():
 
         st.divider()
 
+        st.markdown("#### Bank Suspense Ledger")
+        st.write("Choose which ledger should receive unmatched bank transactions during Tally sync.")
+
+        ledger_options = st.session_state.get('ledger_master', [])
+        if not ledger_options:
+            synced_ledgers = get_synced_ledgers(st.session_state.email)
+            ledger_options = [row[0] for row in synced_ledgers] if synced_ledgers else []
+
+        if not ledger_options:
+            ledger_options = ["Bank Suspense A/c (Default)"]
+
+        current_suspense = st.session_state.get('default_suspense_ledger', "Bank Suspense A/c (Default)")
+        if current_suspense not in ledger_options:
+            ledger_options = [current_suspense] + ledger_options
+
+        suspense_index = ledger_options.index(current_suspense) if current_suspense in ledger_options else 0
+
+        st.selectbox(
+            "Suspense ledger for bank sync:",
+            options=ledger_options,
+            index=suspense_index,
+            key="tally_suspense_ledger",
+            help="This ledger will be used when bank entries cannot be auto-mapped."
+        )
+
+        st.divider()
+
         col1, col2, col3 = st.columns([2, 2, 1])
         with col1:
             if st.button("Save Tally Integration Settings", type="primary", use_container_width=True):
@@ -4141,6 +3961,8 @@ def render_settings_page():
                 company_name = st.session_state.tally_company_name
                 if not st.session_state.detected_companies and 'tally_company_input' in st.session_state:
                     company_name = st.session_state.tally_company_input
+
+                selected_suspense = st.session_state.get('tally_suspense_ledger', st.session_state.default_suspense_ledger)
 
                 conn = get_db_conn()
                 with conn.session as s:
@@ -4169,6 +3991,12 @@ def render_settings_page():
                         push_journal=st.session_state.direct_push_journal_checkbox,
                         sync_on_load=st.session_state.sync_on_load_checkbox
                     ))
+
+                    s.execute(text('''
+                        INSERT INTO user_preferences (email, default_suspense_ledger)
+                        VALUES (:email, :suspense)
+                        ON CONFLICT(email) DO UPDATE SET default_suspense_ledger = :suspense
+                    '''), params=dict(email=st.session_state.email, suspense=selected_suspense))
                     s.commit()
 
                 # Update session state with saved values
@@ -4179,6 +4007,7 @@ def render_settings_page():
                 st.session_state.enable_direct_push_bank = st.session_state.direct_push_bank_checkbox
                 st.session_state.enable_direct_push_journal = st.session_state.direct_push_journal_checkbox
                 st.session_state.sync_ledgers_on_load = st.session_state.sync_on_load_checkbox
+                st.session_state.default_suspense_ledger = selected_suspense
 
                 st.success("Tally integration settings saved successfully!")
 
