@@ -749,8 +749,15 @@ def get_db_conn():
 def hash_password(password):
     return hashlib.sha256(str(password).encode()).hexdigest()
 
-def init_db():
-    """Initializes the database schema using st.connection."""
+def init_db(seed_admin=None, admin_password=None):
+    """Initializes the database schema using st.connection.
+
+    When enabled, seeds a default admin account (email "admin") using the
+    password provided via ``admin_password`` or the ``ADMIN_DEFAULT_PASSWORD``
+    environment variable (fallback: ``admin@2003``). Admin seeding can be
+    disabled by passing ``seed_admin=False`` or setting the
+    ``SEED_DEFAULT_ADMIN`` environment variable to a falsy value.
+    """
     conn = get_db_conn()
     with conn.session as s:
         s.execute(text('''
@@ -856,21 +863,27 @@ def init_db():
             );
         '''))
 
-        # Add Admin User
-        try:
-            admin_pass_hash = hash_password("admin@2003")
-            s.execute(text('''
-                INSERT OR IGNORE INTO users (email, name, phone, password_hash, signup_date, subscription_expiry_date)
-                VALUES (:email, :name, :phone, :pass_hash, DATE('now'), DATE('now', '+100 year'))
-            '''), params=dict(
-                email="admin",
-                name="Administrator",
-                phone="0000000000",
-                pass_hash=admin_pass_hash
-            ))
-            s.commit()
-        except Exception as e:
-            print(f"Admin user creation: {e}")
+        # Add Admin User (seeded only when enabled)
+        should_seed_admin = seed_admin
+        if should_seed_admin is None:
+            should_seed_admin = os.getenv("SEED_DEFAULT_ADMIN", "true").lower() in {"1", "true", "yes", "on"}
+
+        if should_seed_admin:
+            try:
+                admin_pass = admin_password or os.getenv("ADMIN_DEFAULT_PASSWORD", "admin@2003")
+                admin_pass_hash = hash_password(admin_pass)
+                s.execute(text('''
+                    INSERT OR IGNORE INTO users (email, name, phone, password_hash, signup_date, subscription_expiry_date)
+                    VALUES (:email, :name, :phone, :pass_hash, DATE('now'), DATE('now', '+100 year'))
+                '''), params=dict(
+                    email="admin",
+                    name="Administrator",
+                    phone="0000000000",
+                    pass_hash=admin_pass_hash
+                ))
+                s.commit()
+            except Exception as e:
+                print(f"Admin user creation: {e}")
 
 def add_user_to_db(email, name, phone, password):
     """Adds a new user."""
