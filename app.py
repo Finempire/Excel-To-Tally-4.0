@@ -2212,6 +2212,10 @@ if "enable_direct_push_journal" not in st.session_state:
     st.session_state.enable_direct_push_journal = False
 if "sync_ledgers_on_load" not in st.session_state:
     st.session_state.sync_ledgers_on_load = False
+if "tally_simple_mode" not in st.session_state:
+    st.session_state.tally_simple_mode = True
+if "tally_simple_profile" not in st.session_state:
+    st.session_state.tally_simple_profile = "Download XML files only"
 
 # --- 8. ENHANCED PAGE RENDERING FUNCTIONS FOR FINANCIAL AUTOMATION ---
 
@@ -3950,41 +3954,95 @@ def render_settings_page():
 
         st.divider()
 
-        st.markdown("#### Direct Sync Settings")
-        st.checkbox(
-            "Enable direct sync of Tally ledgers",
-            value=st.session_state.enable_direct_sync,
-            key="direct_sync_checkbox",
-            help="When enabled, ledgers will be automatically synced from Tally when you load the application"
+        st.markdown("#### Setup mode")
+        st.session_state.tally_simple_mode = st.checkbox(
+            "Use simplified Tally setup (recommended)",
+            value=st.session_state.tally_simple_mode,
+            help="Toggle to switch between a single-choice setup and detailed advanced controls"
         )
 
-        st.checkbox(
-            "Sync ledgers on application load",
-            value=st.session_state.sync_ledgers_on_load,
-            key="sync_on_load_checkbox",
-            help="Automatically sync ledgers from Tally each time you log in"
-        )
+        if st.session_state.tally_simple_mode:
+            profile_options = [
+                "Download XML files only",
+                "Auto-sync ledgers and push vouchers",
+            ]
+            profile_help = {
+                "Download XML files only": "Keeps everything manual. You download files and import them into Tally yourself.",
+                "Auto-sync ledgers and push vouchers": "Turn on automatic ledger sync plus direct push for both Bank and Journal vouchers.",
+            }
 
-        st.divider()
-
-        st.markdown("#### Direct Push Settings")
-        st.markdown("Enable direct push to automatically send vouchers to Tally instead of downloading XML files.")
-
-        col1, col2 = st.columns(2)
-        with col1:
-            st.checkbox(
-                "Enable direct push for Bank vouchers",
-                value=st.session_state.enable_direct_push_bank,
-                key="direct_push_bank_checkbox",
-                help="When enabled, bank reconciliation vouchers will be pushed directly to Tally"
+            selected_profile = st.radio(
+                "Pick a quick setup",
+                options=profile_options,
+                index=profile_options.index(st.session_state.tally_simple_profile)
+                if st.session_state.tally_simple_profile in profile_options
+                else 0,
+                key="tally_simple_profile",
+                help="Choose the level of automation you want. You can still switch to advanced controls anytime."
             )
-        with col2:
-            st.checkbox(
-                "Enable direct push for Journal vouchers",
-                value=st.session_state.enable_direct_push_journal,
-                key="direct_push_journal_checkbox",
-                help="When enabled, journal vouchers will be pushed directly to Tally"
-            )
+
+            presets = {
+                "Download XML files only": {
+                    "sync": False,
+                    "sync_on_load": False,
+                    "push_bank": False,
+                    "push_journal": False,
+                    "summary": "Manual mode selected. We'll only prepare XML downloads for you.",
+                },
+                "Auto-sync ledgers and push vouchers": {
+                    "sync": True,
+                    "sync_on_load": True,
+                    "push_bank": True,
+                    "push_journal": True,
+                    "summary": "Full automation enabled. Ledgers sync automatically and vouchers push directly to Tally.",
+                },
+            }
+
+            preset = presets[selected_profile]
+            st.session_state.direct_sync_checkbox = preset["sync"]
+            st.session_state.sync_on_load_checkbox = preset["sync_on_load"]
+            st.session_state.direct_push_bank_checkbox = preset["push_bank"]
+            st.session_state.direct_push_journal_checkbox = preset["push_journal"]
+
+            st.success(preset["summary"])
+            st.caption(profile_help[selected_profile])
+        else:
+            with st.expander("Advanced Tally controls", expanded=True):
+                st.markdown("#### Direct Sync Settings")
+                st.checkbox(
+                    "Enable direct sync of Tally ledgers",
+                    value=st.session_state.enable_direct_sync,
+                    key="direct_sync_checkbox",
+                    help="When enabled, ledgers will be automatically synced from Tally when you load the application"
+                )
+
+                st.checkbox(
+                    "Sync ledgers on application load",
+                    value=st.session_state.sync_ledgers_on_load,
+                    key="sync_on_load_checkbox",
+                    help="Automatically sync ledgers from Tally each time you log in"
+                )
+
+                st.divider()
+
+                st.markdown("#### Direct Push Settings")
+                st.markdown("Enable direct push to automatically send vouchers to Tally instead of downloading XML files.")
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.checkbox(
+                        "Enable direct push for Bank vouchers",
+                        value=st.session_state.enable_direct_push_bank,
+                        key="direct_push_bank_checkbox",
+                        help="When enabled, bank reconciliation vouchers will be pushed directly to Tally"
+                    )
+                with col2:
+                    st.checkbox(
+                        "Enable direct push for Journal vouchers",
+                        value=st.session_state.enable_direct_push_journal,
+                        key="direct_push_journal_checkbox",
+                        help="When enabled, journal vouchers will be pushed directly to Tally"
+                    )
 
         st.divider()
 
