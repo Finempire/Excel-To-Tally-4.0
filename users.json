@@ -2,7 +2,7 @@
     "admin": {
         "name": "Admin",
         "phone": "1234567890",
-        "password_hash": "$2b$12$E.P9..iP8coyg3eqkchxfeCPSJ0B3.PVJ6P.19s7.NlhxXo.K9xIS",
+        "password_hash": "$2b$12$lXeuwIKQBz9hyvv03AAMS.ZkFQ99qj4dIiqbsNVCddfUtf0ehnaCG",
         "paid": true
     }
 }
