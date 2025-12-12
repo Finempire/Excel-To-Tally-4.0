@@ -4059,35 +4059,6 @@ def render_settings_page():
                         help="When enabled, journal vouchers will be pushed directly to Tally"
                     )
 
-        st.divider()
-
-        st.markdown("#### Bank Suspense Ledger")
-        st.write("Choose which ledger should receive unmatched bank transactions during Tally sync.")
-
-        ledger_options = st.session_state.get('ledger_master', [])
-        if not ledger_options:
-            synced_ledgers = get_synced_ledgers(st.session_state.email)
-            ledger_options = [row[0] for row in synced_ledgers] if synced_ledgers else []
-
-        if not ledger_options:
-            ledger_options = ["Bank Suspense A/c (Default)"]
-
-        current_suspense = st.session_state.get('default_suspense_ledger', "Bank Suspense A/c (Default)")
-        if current_suspense not in ledger_options:
-            ledger_options = [current_suspense] + ledger_options
-
-        suspense_index = ledger_options.index(current_suspense) if current_suspense in ledger_options else 0
-
-        st.selectbox(
-            "Suspense ledger for bank sync:",
-            options=ledger_options,
-            index=suspense_index,
-            key="tally_suspense_ledger",
-            help="This ledger will be used when bank entries cannot be auto-mapped."
-        )
-
-        st.divider()
-
         col1, col2, col3 = st.columns([2, 2, 1])
         with col1:
             if st.button("Save Tally Integration Settings", type="primary", use_container_width=True):
@@ -4096,7 +4067,6 @@ def render_settings_page():
                 if not st.session_state.detected_companies and 'tally_company_input' in st.session_state:
                     company_name = st.session_state.tally_company_input
 
-                selected_suspense = st.session_state.get('tally_suspense_ledger', st.session_state.default_suspense_ledger)
 
                 conn = get_db_conn()
                 with conn.session as s:
@@ -4126,11 +4096,6 @@ def render_settings_page():
                         sync_on_load=st.session_state.sync_on_load_checkbox
                     ))
 
-                    s.execute(text('''
-                        INSERT INTO user_preferences (email, default_suspense_ledger)
-                        VALUES (:email, :suspense)
-                        ON CONFLICT(email) DO UPDATE SET default_suspense_ledger = :suspense
-                    '''), params=dict(email=st.session_state.email, suspense=selected_suspense))
                     s.commit()
 
                 # Update session state with saved values
@@ -4141,7 +4106,6 @@ def render_settings_page():
                 st.session_state.enable_direct_push_bank = st.session_state.direct_push_bank_checkbox
                 st.session_state.enable_direct_push_journal = st.session_state.direct_push_journal_checkbox
                 st.session_state.sync_ledgers_on_load = st.session_state.sync_on_load_checkbox
-                st.session_state.default_suspense_ledger = selected_suspense
 
                 st.success("Tally integration settings saved successfully!")
 
