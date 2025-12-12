@@ -3231,22 +3231,55 @@ def render_bank_converter_page():
     if enable_direct_push and tally_company_name:
         company_name = tally_company_name
 
-    ledger_master = st.session_state.get('ledger_master', ["Bank Suspense A/c (Default)"])
-    suspense_ledger = st.session_state.get('default_suspense_ledger', None)
+    ledger_master = st.session_state.get('ledger_master', [])
+    if not ledger_master:
+        synced_ledgers = get_synced_ledgers(st.session_state.email)
+        ledger_master = [row[0] for row in synced_ledgers] if synced_ledgers else []
+
+    if not ledger_master:
+        ledger_master = ["Bank Suspense A/c (Default)"]
+
     rules_config = st.session_state.get('bank_rules', [])
     learned_mappings = st.session_state.get('learned_mappings', {})
 
-    # Check setup requirements
-    if not suspense_ledger or suspense_ledger == "Bank Suspense A/c (Default)":
-        st.warning("""
-            **Setup Required**: Please set your **Default Suspense Ledger** in the **Settings** page.
-            
-            This account will be used for transactions that cannot be automatically matched.
-        """)
-        if st.button("Go to Settings", use_container_width=True):
-            st.session_state.current_view = "settings"
-            st.rerun()
-        st.stop()
+    suspense_ledger_options = ledger_master.copy()
+    current_suspense = st.session_state.get('default_suspense_ledger', "Bank Suspense A/c (Default)")
+    if current_suspense not in suspense_ledger_options:
+        suspense_ledger_options = [current_suspense] + suspense_ledger_options
+
+    suspense_index = suspense_ledger_options.index(current_suspense) if current_suspense in suspense_ledger_options else 0
+
+    st.subheader("Suspense Ledger for Unmapped Bank Entries")
+    st.caption("Select which ledger should receive transactions that cannot be auto-mapped during bank sync.")
+    selected_suspense_ledger = st.selectbox(
+        "Choose suspense ledger (synced from Tally):",
+        options=suspense_ledger_options,
+        index=suspense_index,
+        key="bank_page_suspense_ledger",
+        help="Pick the Tally ledger to use for unmatched bank transactions."
+    )
+
+    if selected_suspense_ledger != st.session_state.get('default_suspense_ledger'):
+        st.session_state.default_suspense_ledger = selected_suspense_ledger
+
+    if st.button("Save suspense ledger preference", type="secondary", use_container_width=True):
+        try:
+            conn = get_db_conn()
+            with conn.session as s:
+                s.execute(text('''
+                    INSERT INTO user_preferences (email, default_suspense_ledger)
+                    VALUES (:email, :suspense)
+                    ON CONFLICT(email) DO UPDATE SET default_suspense_ledger = :suspense
+                '''), params=dict(email=st.session_state.email, suspense=selected_suspense_ledger))
+                s.commit()
+            st.success("Suspense ledger preference saved for future sessions.")
+        except Exception as e:
+            st.error(f"Failed to save suspense ledger preference: {e}")
+
+    suspense_ledger = selected_suspense_ledger
+
+    if suspense_ledger == "Bank Suspense A/c (Default)":
+        st.warning("Consider selecting a suspense ledger synced from Tally to improve mapping accuracy.")
     
     # Process Steps
     st.markdown("""
