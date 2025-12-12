@@ -43,66 +43,74 @@ def load_css():
             animation: fadeIn 0.6s ease-out;
         }
         
-        /* Main container styling - WIDER FOR WEB */
+        /* Main container styling - tighter web-focused layout */
         .main .block-container {
-            padding-top: 1rem;
-            padding-bottom: 1rem;
-            max-width: 95%;
+            padding-top: 1.5rem;
+            padding-bottom: 1.5rem;
+            max-width: 1180px;
+            margin: 0 auto;
+        }
+
+        /* Subtle background to reduce visual noise */
+        [data-testid="stAppViewContainer"] {
+            background: radial-gradient(circle at 20% 20%, #f7f9fc 0, #f7f9fc 45%, #eef2f7 100%);
         }
         
         /* --- Financial Dashboard Header --- */
         .dashboard-header {
             background: linear-gradient(135deg, #001f3f 0%, #003366 100%);
-            padding: 2.5rem;
-            border-radius: 15px;
+            padding: 2.2rem 2.5rem;
+            border-radius: 16px;
             color: white;
-            margin-bottom: 2rem;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
         }
         
         .dashboard-title {
-            font-size: 2.8rem;
+            font-size: 2.4rem;
             font-weight: 700;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.4rem;
+            letter-spacing: -0.02em;
         }
         
         .dashboard-subtitle {
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             opacity: 0.9;
-            font-weight: 300;
+            font-weight: 400;
         }
         
         /* --- Metric Cards --- */
         .metric-card {
             background: white;
-            padding: 1.8rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            border: 1px solid #f0f0f0;
+            padding: 1.4rem;
+            border-radius: 14px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            border: 1px solid #e6e8ee;
             text-align: center;
-            transition: transform 0.3s ease;
-            height: 140px;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            min-height: 130px;
             display: flex;
             flex-direction: column;
             justify-content: center;
         }
         
         .metric-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+            transform: translateY(-4px);
+            box-shadow: 0 14px 30px rgba(0,0,0,0.12);
         }
         
         .metric-value {
-            font-size: 2.2rem;
+            font-size: 2rem;
             font-weight: 700;
-            color: #333;
-            margin: 0.5rem 0;
+            color: #1f2937;
+            margin: 0.35rem 0;
         }
         
         .metric-label {
-            font-size: 1rem;
-            color: #666;
-            font-weight: 500;
+            font-size: 0.95rem;
+            color: #4b5563;
+            font-weight: 600;
+            letter-spacing: 0.01em;
         }
         
         .metric-trend {
@@ -111,6 +119,7 @@ def load_css():
             padding: 0.3rem 0.8rem;
             border-radius: 12px;
             display: inline-block;
+            margin-top: 0.25rem;
         }
         
         .trend-up {
@@ -126,137 +135,150 @@ def load_css():
         /* --- Feature Cards --- */
         .feature-card {
             background: white;
-            padding: 2.2rem;
-            border-radius: 15px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            border: 1px solid #f0f0f0;
-            height: 280px;
-            transition: all 0.3s ease;
+            padding: 1.8rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 1px solid #e6e8ee;
+            min-height: 260px;
+            transition: all 0.25s ease;
             cursor: pointer;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            gap: 0.75rem;
         }
         
         .feature-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+            transform: translateY(-6px);
+            box-shadow: 0 16px 40px rgba(0,0,0,0.12);
+            border-color: #d4dae5;
         }
         
         .feature-icon {
-            font-size: 3.2rem;
-            margin-bottom: 1.2rem;
+            font-size: 2.8rem;
+            margin-bottom: 0.4rem;
             background: linear-gradient(135deg, #001f3f, #003366);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
         
         .feature-title {
-            font-size: 1.4rem;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 1.2rem;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 0.35rem;
+            letter-spacing: -0.01em;
         }
         
         .feature-description {
-            color: #666;
-            line-height: 1.6;
-            font-size: 1rem;
+            color: #4b5563;
+            line-height: 1.55;
+            font-size: 0.97rem;
         }
         
         /* --- Navigation Cards --- */
         .nav-card {
             background: white;
-            padding: 1.8rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            border: 1px solid #f0f0f0;
+            padding: 1.5rem;
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 1px solid #e6e8ee;
             text-align: center;
-            transition: all 0.3s ease;
+            transition: all 0.25s ease;
             cursor: pointer;
-            height: 180px;
+            min-height: 170px;
             display: flex;
             flex-direction: column;
             justify-content: center;
+            gap: 0.5rem;
         }
         
         .nav-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
-            border-color: #001f3f;
+            transform: translateY(-4px);
+            box-shadow: 0 14px 32px rgba(0,0,0,0.12);
+            border-color: #d4dae5;
         }
 
         .nav-icon {
-            font-size: 2.8rem;
-            margin-bottom: 1.2rem;
+            font-size: 2.4rem;
+            margin-bottom: 0.4rem;
             color: #001f3f;
         }
         
         .nav-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 0.8rem;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 0.2rem;
+            letter-spacing: -0.01em;
         }
         
         .nav-description {
-            color: #666;
-            font-size: 0.95rem;
+            color: #4b5563;
+            font-size: 0.93rem;
+            line-height: 1.5;
         }
         
         /* --- Process Steps --- */
         .process-steps {
             display: flex;
             justify-content: space-between;
-            margin: 2.5rem 0;
-            gap: 1.5rem;
+            margin: 2rem 0 1rem;
+            gap: 1.25rem;
         }
         
         .process-step {
             text-align: center;
             flex: 1;
             position: relative;
+            background: white;
+            border: 1px solid #e6e8ee;
+            border-radius: 12px;
+            padding: 1.1rem 1rem 1.3rem;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.06);
         }
         
         .step-number {
-            width: 45px;
-            height: 45px;
+            width: 44px;
+            height: 44px;
             background: linear-gradient(135deg, #001f3f, #003366);
             color: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 1.2rem;
-            font-weight: 600;
-            font-size: 1.1rem;
+            margin: 0 auto 0.9rem;
+            font-weight: 700;
+            font-size: 1.05rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
         }
         
         .step-title {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 0.8rem;
-            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 0.35rem;
+            font-size: 1rem;
+            letter-spacing: -0.01em;
         }
         
         .step-description {
-            color: #666;
-            font-size: 0.95rem;
+            color: #4b5563;
+            font-size: 0.92rem;
         }
         
         /* --- Button Styling --- */
         .stButton > button {
             border-radius: 12px;
             font-weight: 600;
-            padding: 0.85rem 2.2rem;
-            transition: all 0.3s ease;
-            font-size: 1rem;
+            padding: 0.8rem 2rem;
+            transition: all 0.25s ease;
+            font-size: 0.98rem;
         }
         
         .primary-button {
             background: linear-gradient(135deg, #001f3f, #003366);
             color: white;
             border: none;
+            box-shadow: 0 12px 30px rgba(0,31,63,0.25);
         }
 
         .primary-button:hover {
@@ -267,33 +289,36 @@ def load_css():
         /* --- Data Upload Cards --- */
         .upload-card {
             background: white;
-            padding: 2.5rem;
+            padding: 2.1rem;
             border-radius: 15px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            border: 2px dashed #ddd;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 1.5px dashed #d4dae5;
             text-align: center;
-            transition: all 0.3s ease;
+            transition: all 0.25s ease;
         }
         
         .upload-card:hover {
             border-color: #001f3f;
-            background: #f0f4f8;
+            background: #f5f7fb;
         }
 
         .upload-icon {
-            font-size: 3.5rem;
+            font-size: 3.2rem;
             color: #001f3f;
-            margin-bottom: 1.2rem;
+            margin-bottom: 0.9rem;
         }
         
         /* --- Status Indicators --- */
         .status-indicator {
             display: inline-flex;
             align-items: center;
-            padding: 0.4rem 1rem;
-            border-radius: 20px;
+            padding: 0.38rem 0.95rem;
+            border-radius: 18px;
             font-size: 0.85rem;
             font-weight: 600;
+            border: 1px solid #e6e8ee;
+            background: white;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.05);
         }
         
         .status-success {
@@ -313,11 +338,12 @@ def load_css():
         
         /* --- Progress Bars --- */
         .progress-container {
-            background: #f0f0f0;
+            background: #edf0f5;
             border-radius: 10px;
             height: 10px;
             margin: 1.2rem 0;
             overflow: hidden;
+            border: 1px solid #e6e8ee;
         }
         
         .progress-bar {
@@ -329,28 +355,28 @@ def load_css():
         
         /* --- WEB-SPECIFIC ADJUSTMENTS (Remove mobile optimizations) --- */
         .dashboard-title {
-            font-size: 2.8rem;
+            font-size: 2.4rem;
         }
-        
+
         .process-steps {
             flex-direction: row;
-            gap: 1.5rem;
+            gap: 1.25rem;
         }
-        
+
         .metric-card {
-            padding: 1.8rem;
+            padding: 1.4rem;
         }
-        
+
         .metric-value {
-            font-size: 2.2rem;
+            font-size: 2rem;
         }
         
         /* --- Sidebar Styling - WIDER FOR WEB --- */
         section[data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
-            border-right: 1px solid #e0e0e0;
-            min-width: 300px !important;
-            max-width: 350px !important;
+            background: linear-gradient(180deg, #f9fafb 0%, #ffffff 100%);
+            border-right: 1px solid #e6e8ee;
+            min-width: 260px !important;
+            max-width: 300px !important;
         }
         
         .sidebar-header {
@@ -386,8 +412,8 @@ def load_css():
             padding: 2.5rem;
             border-radius: 15px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            margin: 1.5rem 0;
-            max-width: 100%;
+            margin: 1.5rem auto;
+            max-width: 960px;
         }
         
         .form-title {
