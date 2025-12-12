@@ -3429,6 +3429,16 @@ def render_bank_converter_page():
             # Allow users to choose which transactions to include in export/push
             df['Include'] = True
 
+            # Preserve mapping edits (including bulk selection) while the same file is active
+            if (
+                'bank_mapping_df' not in st.session_state
+                or st.session_state.get('bank_mapping_file') != uploaded_file.name
+            ):
+                st.session_state.bank_mapping_df = df.copy()
+                st.session_state.bank_mapping_file = uploaded_file.name
+            else:
+                df = st.session_state.bank_mapping_df.copy()
+
             st.success(f"Bank statement processed! {len(df)} transactions ready for mapping.")
 
             st.divider()
@@ -3479,7 +3489,10 @@ def render_bank_converter_page():
                                     updated_count += 1
                         
                         st.success(f"Auto-mapped {updated_count} transactions!")
-                        
+
+                        # Persist auto-mapped updates for this file session
+                        st.session_state.bank_mapping_df = df.copy()
+
                         # Show mapping statistics
                         if updated_count > 0:
                             mapping_sources = {}
@@ -3505,9 +3518,22 @@ def render_bank_converter_page():
 
             # Data editor for manual mapping
             st.write(f"Mapping {len(df)} transactions. Select the correct ledger for each transaction:")
-            
+
+            bulk_select_col, bulk_unselect_col = st.columns(2)
+            with bulk_select_col:
+                if st.button("Select all transactions", use_container_width=True, key="bank_select_all"):
+                    st.session_state.bank_mapping_df["Include"] = True
+                    df = st.session_state.bank_mapping_df.copy()
+
+            with bulk_unselect_col:
+                if st.button("Deselect all transactions", use_container_width=True, key="bank_deselect_all"):
+                    st.session_state.bank_mapping_df["Include"] = False
+                    df = st.session_state.bank_mapping_df.copy()
+
+            working_df = st.session_state.bank_mapping_df.copy()
+
             edited_df = st.data_editor(
-                df[['Date', 'Narration', 'Debit', 'Credit', 'Mapped Ledger', 'Include']],
+                working_df[['Date', 'Narration', 'Debit', 'Credit', 'Mapped Ledger', 'Include']],
                 column_config={
                     "Mapped Ledger": st.column_config.SelectboxColumn(
                         "Mapped Ledger",
@@ -3526,6 +3552,8 @@ def render_bank_converter_page():
                 num_rows="dynamic",
                 key="bank_mapping_editor"
             )
+
+            st.session_state.bank_mapping_df = edited_df.copy()
 
             st.divider()
 
