@@ -1654,6 +1654,11 @@ def auto_map_ledgers_based_on_rules(narrations_list, ledger_master, rules_config
     """
     auto_mappings = {}
 
+    # Ensure AI model and embeddings are ready for enhanced matching
+    initialize_ai_model()
+    if ledger_mapper.initialized and (ledger_mapper.ledger_master != ledger_master or ledger_mapper.ledger_embeddings is None):
+        ledger_mapper.compute_ledger_embeddings(ledger_master)
+
     # Filter out NaN values before processing to avoid dictionary key issues
     valid_narrations = [n for n in narrations_list if pd.notna(n)]
 
@@ -1691,7 +1696,24 @@ def auto_map_ledgers_based_on_rules(narrations_list, ledger_master, rules_config
             auto_mappings[narration_str] = best_learned_ledger
             continue
             
-        # Strategy 4: Default to suspense ledger
+        # Strategy 4: AI-powered suggestion fallback
+        if ledger_mapper.initialized and ledger_master:
+            try:
+                ai_ledger, confidence, match_type = ledger_mapper.multi_strategy_match(
+                    narration_str,
+                    ledger_master,
+                    rules_config,
+                    suspense_ledger,
+                    learned_mappings
+                )
+
+                if ai_ledger and ai_ledger != suspense_ledger:
+                    auto_mappings[narration_str] = ai_ledger
+                    continue
+            except Exception as e:
+                print(f"AI auto-mapping failed for narration '{narration_str}': {e}")
+
+        # Strategy 5: Default to suspense ledger
         auto_mappings[narration_str] = suspense_ledger
     
     return auto_mappings
@@ -1971,6 +1993,16 @@ def create_bank_tally_xml(df, bank_ledger, company_name):
         company_name=company_name_safe,
         tally_messages="\n".join(all_tally_messages)
     )
+
+def filter_selected_transactions(df):
+    """Return only transactions marked for inclusion."""
+    include_mask = df.get('Include', True)
+
+    # If Include column is missing, assume everything should be processed
+    if isinstance(include_mask, bool):
+        include_mask = pd.Series([include_mask] * len(df))
+
+    return df[include_mask.astype(bool)]
 
 def sync_ledgers_from_tally(host, port, company_name, email):
     """
@@ -3380,25 +3412,27 @@ def render_bank_converter_page():
         try:
             # Process file
             df = pd.read_csv(uploaded_file, encoding='latin1') if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
-            df.columns = [str(c).strip().title() for c in df.columns] 
-            
+            df.columns = [str(c).strip().title() for c in df.columns]
+
             # Validate required columns
             for col in ['Date', 'Narration', 'Debit', 'Credit']:
                 if col not in df.columns:
                     st.error(f"Required column '{col}' not found in file. Please use the template.")
                     st.stop()
-            
+
             # Convert numeric columns
             for col in ['Debit', 'Credit']:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
             # Set default ledger for all transactions
             df['Mapped Ledger'] = suspense_ledger
-            
+            # Allow users to choose which transactions to include in export/push
+            df['Include'] = True
+
             st.success(f"Bank statement processed! {len(df)} transactions ready for mapping.")
-            
+
             st.divider()
-            
+
             # Step 4: Mapping Section with Auto-Map Button
             st.subheader("4. Map Transactions to Ledgers")
             
@@ -3473,14 +3507,19 @@ def render_bank_converter_page():
             st.write(f"Mapping {len(df)} transactions. Select the correct ledger for each transaction:")
             
             edited_df = st.data_editor(
-                df[['Date', 'Narration', 'Debit', 'Credit', 'Mapped Ledger']],
+                df[['Date', 'Narration', 'Debit', 'Credit', 'Mapped Ledger', 'Include']],
                 column_config={
                     "Mapped Ledger": st.column_config.SelectboxColumn(
                         "Mapped Ledger",
                         help="Select the Tally ledger for this transaction",
                         options=ledger_master,
                         required=True,
-                    )
+                    ),
+                    "Include": st.column_config.CheckboxColumn(
+                        "Include",
+                        help="Uncheck to skip pushing/downloading this transaction",
+                        default=True,
+                    ),
                 },
                 use_container_width=True,
                 hide_index=True,
@@ -3497,9 +3536,14 @@ def render_bank_converter_page():
             if enable_direct_push:
                 # Show Direct Push button as primary action
                 if st.button("🚀 Direct Push to Tally", type="primary", use_container_width=True):
+                    selected_df = filter_selected_transactions(edited_df)
+                    if selected_df.empty:
+                        st.warning("Please select at least one transaction to push to Tally.")
+                        st.stop()
+
                     # Automatically learn from user mappings
                     learned_count = 0
-                    for index, row in edited_df.iterrows():
+                    for index, row in selected_df.iterrows():
                         narration = str(row['Narration'])
                         mapped_ledger = row['Mapped Ledger']
 
@@ -3517,7 +3561,7 @@ def render_bank_converter_page():
 
                     with st.spinner("Pushing bank vouchers to Tally..."):
                         xml_data = create_bank_tally_xml(
-                            edited_df,
+                            selected_df,
                             bank_ledger,
                             company_name
                         )
@@ -3544,9 +3588,14 @@ def render_bank_converter_page():
 
                 # Show Download XML as secondary option
                 if st.button("📥 Download Bank XML (Backup)", use_container_width=True):
+                    selected_df = filter_selected_transactions(edited_df)
+                    if selected_df.empty:
+                        st.warning("Please select at least one transaction to download.")
+                        st.stop()
+
                     # Automatically learn from user mappings
                     learned_count = 0
-                    for index, row in edited_df.iterrows():
+                    for index, row in selected_df.iterrows():
                         narration = str(row['Narration'])
                         mapped_ledger = row['Mapped Ledger']
 
@@ -3564,7 +3613,7 @@ def render_bank_converter_page():
 
                     with st.spinner("Generating Tally XML..."):
                         xml_data = create_bank_tally_xml(
-                            edited_df,
+                            selected_df,
                             bank_ledger,
                             company_name
                         )
@@ -3580,9 +3629,14 @@ def render_bank_converter_page():
             else:
                 # Show only Generate XML button when direct push is disabled
                 if st.button("Generate Tally XML", type="primary", use_container_width=True):
+                    selected_df = filter_selected_transactions(edited_df)
+                    if selected_df.empty:
+                        st.warning("Please select at least one transaction to include in the XML.")
+                        st.stop()
+
                     # Automatically learn from user mappings when they generate XML
                     learned_count = 0
-                    for index, row in edited_df.iterrows():
+                    for index, row in selected_df.iterrows():
                         narration = str(row['Narration'])
                         mapped_ledger = row['Mapped Ledger']
 
@@ -3600,7 +3654,7 @@ def render_bank_converter_page():
 
                     with st.spinner("Generating Tally XML..."):
                         xml_data = create_bank_tally_xml(
-                            edited_df,
+                            selected_df,
                             bank_ledger,
                             company_name
                         )
