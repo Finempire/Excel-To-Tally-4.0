@@ -3519,17 +3519,6 @@ def render_bank_converter_page():
             # Data editor for manual mapping
             st.write(f"Mapping {len(df)} transactions. Select the correct ledger for each transaction:")
 
-            bulk_select_col, bulk_unselect_col = st.columns(2)
-            with bulk_select_col:
-                if st.button("Select all transactions", use_container_width=True, key="bank_select_all"):
-                    st.session_state.bank_mapping_df["Include"] = True
-                    df = st.session_state.bank_mapping_df.copy()
-
-            with bulk_unselect_col:
-                if st.button("Deselect all transactions", use_container_width=True, key="bank_deselect_all"):
-                    st.session_state.bank_mapping_df["Include"] = False
-                    df = st.session_state.bank_mapping_df.copy()
-
             working_df = st.session_state.bank_mapping_df.copy()
 
             edited_df = st.data_editor(
