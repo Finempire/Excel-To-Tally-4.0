@@ -2438,7 +2438,7 @@ def render_signup_page():
 
 def render_main_page():
     """Enhanced main page with financial automation dashboard"""
-    
+
     # Header Section
     st.markdown("""
         <div class="dashboard-header">
@@ -2446,93 +2446,154 @@ def render_main_page():
             <div class="dashboard-subtitle">Automate your Tally data entry with AI-powered accuracy</div>
         </div>
     """, unsafe_allow_html=True)
-    
+
+    st.markdown(
+        """
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom: 1.5rem;">
+            <span class="status-indicator status-success">Bank & journal ready</span>
+            <span class="status-indicator status-warning">Human review built-in</span>
+            <span class="status-indicator status-success">Export-ready XML files</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     # Quick Stats Row
     col1, col2, col3, col4 = st.columns(4)
-    
+
     with col1:
-        st.markdown(f"""
+        st.markdown(
+            f"""
             <div class="metric-card">
                 <div class="metric-label">Conversion Accuracy</div>
                 <div class="metric-value">98.7%</div>
-                <div class="metric-trend trend-up">+2.3%</div>
+                <div class="metric-trend trend-up">Consistently improving</div>
             </div>
-        """, unsafe_allow_html=True)
-    
+        """,
+            unsafe_allow_html=True,
+        )
+
     with col2:
-        st.markdown(f"""
+        st.markdown(
+            f"""
             <div class="metric-card">
                 <div class="metric-label">Time Saved</div>
-                <div class="metric-value">85%</div>
-                <div class="metric-trend trend-up">+15%</div>
+                <div class="metric-value">4h/day</div>
+                <div class="metric-trend trend-up">Teams report 85% faster closes</div>
             </div>
-        """, unsafe_allow_html=True)
-    
+        """,
+            unsafe_allow_html=True,
+        )
+
     with col3:
-        st.markdown(f"""
+        st.markdown(
+            f"""
             <div class="metric-card">
-                <div class="metric-label">Active Users</div>
+                <div class="metric-label">Active Workspaces</div>
                 <div class="metric-value">1,247</div>
-                <div class="metric-trend trend-up">+12%</div>
+                <div class="metric-trend trend-up">Growing weekly</div>
             </div>
-        """, unsafe_allow_html=True)
-    
+        """,
+            unsafe_allow_html=True,
+        )
+
     with col4:
-        st.markdown(f"""
+        st.markdown(
+            f"""
             <div class="metric-card">
-                <div class="metric-label">Success Rate</div>
+                <div class="metric-label">Ledger Coverage</div>
                 <div class="metric-value">99.2%</div>
-                <div class="metric-trend trend-up">+0.8%</div>
+                <div class="metric-trend trend-up">Mapping confidence</div>
             </div>
-        """, unsafe_allow_html=True)
-    
+        """,
+            unsafe_allow_html=True,
+        )
+
     # Features Section
     st.markdown("## Core Financial Automation Features")
-    
+
     col1, col2, col3 = st.columns(3)
-    
+
     with col1:
-        st.markdown("""
+        st.markdown(
+            """
             <div class="feature-card">
                 <div class="feature-icon">🏦</div>
                 <div class="feature-title">Smart Bank Reconciliation</div>
                 <div class="feature-description">
-                    Automatically match bank transactions with Tally ledgers using advanced AI. 
-                    Reduce reconciliation time from hours to minutes.
+                    Automatically match bank transactions with Tally ledgers using advanced AI.
+                    Reduce reconciliation time from hours to minutes with built-in exception cues.
                 </div>
             </div>
-        """, unsafe_allow_html=True)
-    
+        """,
+            unsafe_allow_html=True,
+        )
+
     with col2:
-        st.markdown("""
+        st.markdown(
+            """
             <div class="feature-card">
-                <div class="feature-icon">DATA</div>
+                <div class="feature-icon">📑</div>
                 <div class="feature-title">Journal Automation</div>
                 <div class="feature-description">
-                    Convert CSV/Excel journals to Tally XML with intelligent ledger mapping. 
-                    Perfect for payroll, invoices, and expense tracking.
+                    Convert CSV/Excel journals to Tally XML with intelligent ledger mapping.
+                    Perfect for payroll, invoices, and expense tracking with reusable templates.
                 </div>
             </div>
-        """, unsafe_allow_html=True)
-    
+        """,
+            unsafe_allow_html=True,
+        )
+
     with col3:
-        st.markdown("""
+        st.markdown(
+            """
             <div class="feature-card">
                 <div class="feature-icon">⚡</div>
                 <div class="feature-title">Streamlined Data Entry</div>
                 <div class="feature-description">
-                    Automated data processing with template management. 
-                    Eliminate manual entry errors and save valuable accounting time.
+                    Automated data processing with template management.
+                    Eliminate manual entry errors and keep teams aligned with guided reviews.
                 </div>
             </div>
-        """, unsafe_allow_html=True)
-    
+        """,
+            unsafe_allow_html=True,
+        )
+
     st.markdown("---")
-    
+
+    # Guided experience
+    st.markdown("## Your workspace at a glance")
+    exp_col1, exp_col2 = st.columns(2)
+    with exp_col1:
+        st.markdown(
+            """
+            <div class="nav-card">
+                <div class="nav-icon">🧭</div>
+                <div class="nav-title">Guided Bank Workflows</div>
+                <div class="nav-description">Upload statements, review AI matches, and finalize reconciliations with fewer clicks.</div>
+            </div>
+        """,
+            unsafe_allow_html=True,
+        )
+    with exp_col2:
+        st.markdown(
+            """
+            <div class="nav-card">
+                <div class="nav-icon">🧾</div>
+                <div class="nav-title">Bulk Journal Uploads</div>
+                <div class="nav-description">Standardize monthly imports with saved templates and automated ledger suggestions.</div>
+            </div>
+        """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("---")
+
     # How It Works Section
     st.markdown("## How Financial Automation Works")
-    
-    st.markdown("""
+
+    st.markdown(
+        """
         <div class="process-steps">
             <div class="process-step">
                 <div class="step-number">1</div>
@@ -2555,20 +2616,25 @@ def render_main_page():
                 <div class="step-description">Ready-to-import XML</div>
             </div>
         </div>
-    """, unsafe_allow_html=True)
-    
+    """,
+        unsafe_allow_html=True,
+    )
+
     st.markdown("---")
-    
+
     # CTA Section with Login/Signup
-    st.markdown("""
+    st.markdown(
+        """
         <div style="text-align: center; padding: 3rem 1rem;">
-            <h2 style="color: #333; margin-bottom: 1rem;">Ready to Transform Your Accounting Workflow?</h2>
-            <p style="color: #666; margin-bottom: 2rem; font-size: 1.1rem;">
-                Join thousands of businesses automating their financial processes with Xml2Tally
+            <h2 style="color: #333; margin-bottom: 1rem;">Ready to transform your accounting workflow?</h2>
+            <p style="color: #666; margin-bottom: 1.5rem; font-size: 1.05rem;">
+                Start with guided flows or jump straight into conversions with your existing templates.
             </p>
         </div>
-    """, unsafe_allow_html=True)
-    
+    """,
+        unsafe_allow_html=True,
+    )
+
     col1, col2, col3 = st.columns([1, 3, 1])
     with col2:
         auth_col1, auth_col2 = st.columns(2)
@@ -2580,6 +2646,15 @@ def render_main_page():
             if st.button("Start Free Trial", use_container_width=True):
                 st.session_state.current_view = "signup"
                 st.rerun()
+
+        st.markdown(
+            """
+            <div style="margin-top: 1.2rem; color: #4a5568; font-size: 0.95rem; text-align: center;">
+                No setup required • Works with existing Tally ledgers • Support team on standby
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     # Footer
     st.markdown("---")
