@@ -3454,22 +3454,27 @@ def render_bank_converter_page():
     
     # Step 3: Upload and Process
     st.subheader("3. Upload Bank Statement")
-    
-    st.markdown("""
-        <div class="upload-card">
-            <div class="upload-icon">🏦</div>
-            <h3>Upload Your Bank Statement</h3>
-            <p>Supported formats: CSV, Excel (.xlsx)</p>
-            <p style="font-size: 0.9rem; color: #666;">Required columns: Date, Narration, Debit, Credit</p>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    uploaded_file = st.file_uploader(
-        "Choose your bank statement file",
-        type=["csv", "xlsx"],
-        key="bank_uploader",
-        label_visibility="collapsed"
-    )
+
+    upload_col, helper_col = st.columns([2, 1])
+    with upload_col:
+        uploaded_file = st.file_uploader(
+            "Upload Statement",
+            type=["csv", "xlsx"],
+            key="bank_uploader",
+            help="Drag and drop or browse to add your bank statement in CSV or Excel format.",
+        )
+
+    with helper_col:
+        st.markdown("""
+            <div class="upload-card">
+                <div class="upload-icon">🏦</div>
+                <h4 style="margin: 0;">Required columns</h4>
+                <p style="font-size: 0.9rem; color: #666;">Date, Narration, Debit, Credit</p>
+            </div>
+        """, unsafe_allow_html=True)
+
+    if not uploaded_file:
+        st.info("No statement uploaded yet. Add a CSV or Excel file to start mapping.")
     
     if uploaded_file and bank_ledger:
         try:
