@@ -44,66 +44,74 @@ def load_css():
             animation: fadeIn 0.6s ease-out;
         }
         
-        /* Main container styling - WIDER FOR WEB */
+        /* Main container styling - tighter web-focused layout */
         .main .block-container {
-            padding-top: 1rem;
-            padding-bottom: 1rem;
-            max-width: 95%;
+            padding-top: 1.5rem;
+            padding-bottom: 1.5rem;
+            max-width: 1180px;
+            margin: 0 auto;
+        }
+
+        /* Subtle background to reduce visual noise */
+        [data-testid="stAppViewContainer"] {
+            background: radial-gradient(circle at 20% 20%, #f7f9fc 0, #f7f9fc 45%, #eef2f7 100%);
         }
         
         /* --- Financial Dashboard Header --- */
         .dashboard-header {
             background: linear-gradient(135deg, #001f3f 0%, #003366 100%);
-            padding: 2.5rem;
-            border-radius: 15px;
+            padding: 2.2rem 2.5rem;
+            border-radius: 16px;
             color: white;
-            margin-bottom: 2rem;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
         }
         
         .dashboard-title {
-            font-size: 2.8rem;
+            font-size: 2.4rem;
             font-weight: 700;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.4rem;
+            letter-spacing: -0.02em;
         }
         
         .dashboard-subtitle {
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             opacity: 0.9;
-            font-weight: 300;
+            font-weight: 400;
         }
         
         /* --- Metric Cards --- */
         .metric-card {
             background: white;
-            padding: 1.8rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            border: 1px solid #f0f0f0;
+            padding: 1.4rem;
+            border-radius: 14px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            border: 1px solid #e6e8ee;
             text-align: center;
-            transition: transform 0.3s ease;
-            height: 140px;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            min-height: 130px;
             display: flex;
             flex-direction: column;
             justify-content: center;
         }
         
         .metric-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+            transform: translateY(-4px);
+            box-shadow: 0 14px 30px rgba(0,0,0,0.12);
         }
         
         .metric-value {
-            font-size: 2.2rem;
+            font-size: 2rem;
             font-weight: 700;
-            color: #333;
-            margin: 0.5rem 0;
+            color: #1f2937;
+            margin: 0.35rem 0;
         }
         
         .metric-label {
-            font-size: 1rem;
-            color: #666;
-            font-weight: 500;
+            font-size: 0.95rem;
+            color: #4b5563;
+            font-weight: 600;
+            letter-spacing: 0.01em;
         }
         
         .metric-trend {
@@ -112,6 +120,7 @@ def load_css():
             padding: 0.3rem 0.8rem;
             border-radius: 12px;
             display: inline-block;
+            margin-top: 0.25rem;
         }
         
         .trend-up {
@@ -127,137 +136,150 @@ def load_css():
         /* --- Feature Cards --- */
         .feature-card {
             background: white;
-            padding: 2.2rem;
-            border-radius: 15px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            border: 1px solid #f0f0f0;
-            height: 280px;
-            transition: all 0.3s ease;
+            padding: 1.8rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 1px solid #e6e8ee;
+            min-height: 260px;
+            transition: all 0.25s ease;
             cursor: pointer;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            gap: 0.75rem;
         }
         
         .feature-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+            transform: translateY(-6px);
+            box-shadow: 0 16px 40px rgba(0,0,0,0.12);
+            border-color: #d4dae5;
         }
         
         .feature-icon {
-            font-size: 3.2rem;
-            margin-bottom: 1.2rem;
+            font-size: 2.8rem;
+            margin-bottom: 0.4rem;
             background: linear-gradient(135deg, #001f3f, #003366);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
         
         .feature-title {
-            font-size: 1.4rem;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 1.2rem;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 0.35rem;
+            letter-spacing: -0.01em;
         }
         
         .feature-description {
-            color: #666;
-            line-height: 1.6;
-            font-size: 1rem;
+            color: #4b5563;
+            line-height: 1.55;
+            font-size: 0.97rem;
         }
         
         /* --- Navigation Cards --- */
         .nav-card {
             background: white;
-            padding: 1.8rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            border: 1px solid #f0f0f0;
+            padding: 1.5rem;
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 1px solid #e6e8ee;
             text-align: center;
-            transition: all 0.3s ease;
+            transition: all 0.25s ease;
             cursor: pointer;
-            height: 180px;
+            min-height: 170px;
             display: flex;
             flex-direction: column;
             justify-content: center;
+            gap: 0.5rem;
         }
         
         .nav-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
-            border-color: #001f3f;
+            transform: translateY(-4px);
+            box-shadow: 0 14px 32px rgba(0,0,0,0.12);
+            border-color: #d4dae5;
         }
 
         .nav-icon {
-            font-size: 2.8rem;
-            margin-bottom: 1.2rem;
+            font-size: 2.4rem;
+            margin-bottom: 0.4rem;
             color: #001f3f;
         }
         
         .nav-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 0.8rem;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 0.2rem;
+            letter-spacing: -0.01em;
         }
         
         .nav-description {
-            color: #666;
-            font-size: 0.95rem;
+            color: #4b5563;
+            font-size: 0.93rem;
+            line-height: 1.5;
         }
         
         /* --- Process Steps --- */
         .process-steps {
             display: flex;
             justify-content: space-between;
-            margin: 2.5rem 0;
-            gap: 1.5rem;
+            margin: 2rem 0 1rem;
+            gap: 1.25rem;
         }
         
         .process-step {
             text-align: center;
             flex: 1;
             position: relative;
+            background: white;
+            border: 1px solid #e6e8ee;
+            border-radius: 12px;
+            padding: 1.1rem 1rem 1.3rem;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.06);
         }
         
         .step-number {
-            width: 45px;
-            height: 45px;
+            width: 44px;
+            height: 44px;
             background: linear-gradient(135deg, #001f3f, #003366);
             color: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 1.2rem;
-            font-weight: 600;
-            font-size: 1.1rem;
+            margin: 0 auto 0.9rem;
+            font-weight: 700;
+            font-size: 1.05rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
         }
         
         .step-title {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 0.8rem;
-            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 0.35rem;
+            font-size: 1rem;
+            letter-spacing: -0.01em;
         }
         
         .step-description {
-            color: #666;
-            font-size: 0.95rem;
+            color: #4b5563;
+            font-size: 0.92rem;
         }
         
         /* --- Button Styling --- */
         .stButton > button {
             border-radius: 12px;
             font-weight: 600;
-            padding: 0.85rem 2.2rem;
-            transition: all 0.3s ease;
-            font-size: 1rem;
+            padding: 0.8rem 2rem;
+            transition: all 0.25s ease;
+            font-size: 0.98rem;
         }
         
         .primary-button {
             background: linear-gradient(135deg, #001f3f, #003366);
             color: white;
             border: none;
+            box-shadow: 0 12px 30px rgba(0,31,63,0.25);
         }
 
         .primary-button:hover {
@@ -268,33 +290,36 @@ def load_css():
         /* --- Data Upload Cards --- */
         .upload-card {
             background: white;
-            padding: 2.5rem;
+            padding: 2.1rem;
             border-radius: 15px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            border: 2px dashed #ddd;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 1.5px dashed #d4dae5;
             text-align: center;
-            transition: all 0.3s ease;
+            transition: all 0.25s ease;
         }
         
         .upload-card:hover {
             border-color: #001f3f;
-            background: #f0f4f8;
+            background: #f5f7fb;
         }
 
         .upload-icon {
-            font-size: 3.5rem;
+            font-size: 3.2rem;
             color: #001f3f;
-            margin-bottom: 1.2rem;
+            margin-bottom: 0.9rem;
         }
         
         /* --- Status Indicators --- */
         .status-indicator {
             display: inline-flex;
             align-items: center;
-            padding: 0.4rem 1rem;
-            border-radius: 20px;
+            padding: 0.38rem 0.95rem;
+            border-radius: 18px;
             font-size: 0.85rem;
             font-weight: 600;
+            border: 1px solid #e6e8ee;
+            background: white;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.05);
         }
         
         .status-success {
@@ -314,11 +339,12 @@ def load_css():
         
         /* --- Progress Bars --- */
         .progress-container {
-            background: #f0f0f0;
+            background: #edf0f5;
             border-radius: 10px;
             height: 10px;
             margin: 1.2rem 0;
             overflow: hidden;
+            border: 1px solid #e6e8ee;
         }
         
         .progress-bar {
@@ -330,28 +356,28 @@ def load_css():
         
         /* --- WEB-SPECIFIC ADJUSTMENTS (Remove mobile optimizations) --- */
         .dashboard-title {
-            font-size: 2.8rem;
+            font-size: 2.4rem;
         }
-        
+
         .process-steps {
             flex-direction: row;
-            gap: 1.5rem;
+            gap: 1.25rem;
         }
-        
+
         .metric-card {
-            padding: 1.8rem;
+            padding: 1.4rem;
         }
-        
+
         .metric-value {
-            font-size: 2.2rem;
+            font-size: 2rem;
         }
         
         /* --- Sidebar Styling - WIDER FOR WEB --- */
         section[data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
-            border-right: 1px solid #e0e0e0;
-            min-width: 300px !important;
-            max-width: 350px !important;
+            background: linear-gradient(180deg, #f9fafb 0%, #ffffff 100%);
+            border-right: 1px solid #e6e8ee;
+            min-width: 260px !important;
+            max-width: 300px !important;
         }
         
         .sidebar-header {
@@ -387,8 +413,8 @@ def load_css():
             padding: 2.5rem;
             border-radius: 15px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            margin: 1.5rem 0;
-            max-width: 100%;
+            margin: 1.5rem auto;
+            max-width: 960px;
         }
         
         .form-title {
@@ -678,11 +704,11 @@ We do not sell, trade, or rent your personal information to third parties. We ma
 * **Law Enforcement:** If required by law or to respond to valid legal processes.
 
 ### 5. Your Rights
-You have the right to access, correct, or delete your personal information. Please contact us at **support@xml2tally.in** to make such a request.
+You have the right to access, correct, or delete your personal information. Please contact us at <strong style="white-space: nowrap;">support@xml2tally.in</strong> to make such a request.
 
 ### 6. Contact Us
 If you have any questions about this Privacy Policy, please contact us at:
-**support@xml2tally.in**
+<strong style="white-space: nowrap;">support@xml2tally.in</strong>
 """
 TERMS_POLICY_TEXT = """
 ## Terms & Conditions
@@ -775,6 +801,15 @@ def verify_password(password, stored_hash):
 
 def init_db():
     """Initializes the database schema using st.connection."""
+def init_db(seed_admin=None, admin_password=None):
+    """Initializes the database schema using st.connection.
+
+    When enabled, seeds a default admin account (email "admin") using the
+    password provided via ``admin_password`` or the ``ADMIN_DEFAULT_PASSWORD``
+    environment variable (fallback: ``admin@2003``). Admin seeding can be
+    disabled by passing ``seed_admin=False`` or setting the
+    ``SEED_DEFAULT_ADMIN`` environment variable to a falsy value.
+    """
     conn = get_db_conn()
     with conn.session as s:
         s.execute(text('''
@@ -900,6 +935,27 @@ def init_db():
             s.commit()
         except Exception as e:
             print(f"Admin user creation: {e}")
+        # Add Admin User (seeded only when enabled)
+        should_seed_admin = seed_admin
+        if should_seed_admin is None:
+            should_seed_admin = os.getenv("SEED_DEFAULT_ADMIN", "true").lower() in {"1", "true", "yes", "on"}
+
+        if should_seed_admin:
+            try:
+                admin_pass = admin_password or os.getenv("ADMIN_DEFAULT_PASSWORD", "admin@2003")
+                admin_pass_hash = hash_password(admin_pass)
+                s.execute(text('''
+                    INSERT OR IGNORE INTO users (email, name, phone, password_hash, signup_date, subscription_expiry_date)
+                    VALUES (:email, :name, :phone, :pass_hash, DATE('now'), DATE('now', '+100 year'))
+                '''), params=dict(
+                    email="admin",
+                    name="Administrator",
+                    phone="0000000000",
+                    pass_hash=admin_pass_hash
+                ))
+                s.commit()
+            except Exception as e:
+                print(f"Admin user creation: {e}")
 
 def add_user_to_db(email, name, phone, password):
     """Adds a new user."""
@@ -1295,8 +1351,78 @@ class EnhancedLedgerMapper:
         # Remove extra spaces and special characters, but keep meaningful words
         narration_str = re.sub(r'[^a-zA-Z0-9\s]', ' ', narration_str)
         narration_str = re.sub(r'\s+', ' ', narration_str).strip()
-        
+
         return narration_str
+
+    def build_ledger_keyword_index(self, ledger_master):
+        """Prepare searchable keyword sets from ledger names"""
+        noise_words = {
+            'account', 'a/c', 'ac', 'ledger', 'bank', 'cash', 'general',
+            'misc', 'miscellaneous', 'expense', 'expenses', 'and', '&'
+        }
+
+        keyword_synonyms = {
+            'fuel': {'petrol', 'diesel', 'gas', 'cng'},
+            'petrol': {'fuel', 'diesel', 'gas', 'cng'},
+            'diesel': {'fuel', 'petrol', 'gas', 'cng'},
+            'rent': {'lease'},
+            'salary': {'payroll', 'wages', 'wage'},
+            'travel': {'transport', 'conveyance'},
+            'vendor': {'supplier', 'contractor'},
+            'client': {'customer', 'debtor'},
+            'gst': {'tax'},
+            'tds': {'tax'},
+        }
+
+        ledger_index = []
+
+        for ledger in ledger_master:
+            clean_ledger = self.preprocess_narration(ledger)
+            ledger_words = [word for word in clean_ledger.lower().split() if word and word not in noise_words]
+
+            expanded_keywords = set(ledger_words)
+            for word in ledger_words:
+                expanded_keywords.update(keyword_synonyms.get(word, set()))
+
+            ledger_index.append({
+                'ledger': ledger,
+                'clean': clean_ledger,
+                'keywords': expanded_keywords
+            })
+
+        return ledger_index
+
+    def ledger_name_focus_match(self, narration, ledger_master):
+        """Prioritize matches that align closely with ledger names"""
+        clean_narration = self.preprocess_narration(narration)
+        narration_words = set(clean_narration.lower().split()) if clean_narration else set()
+
+        if not narration_words or not ledger_master:
+            return None, 0
+
+        ledger_index = self.build_ledger_keyword_index(ledger_master)
+        best_ledger = None
+        best_score = 0
+
+        for entry in ledger_index:
+            overlap = narration_words.intersection(entry['keywords'])
+            overlap_score = len(overlap) * 22  # Boost for strong keyword overlap
+
+            name_similarity = self.calculate_string_similarity(clean_narration, entry['clean'])
+            similarity_score = name_similarity * 60
+
+            partial_bonus = 20 if entry['clean'] and entry['clean'] in clean_narration else 0
+
+            combined_score = overlap_score + similarity_score + partial_bonus
+
+            if combined_score > best_score and (overlap or name_similarity >= 0.55):
+                best_score = combined_score
+                best_ledger = entry['ledger']
+
+        if best_ledger:
+            return best_ledger, min(95, best_score)
+
+        return None, 0
     
     def compute_ledger_embeddings(self, ledger_master):
         """Compute embeddings for the ledger master"""
@@ -1457,13 +1583,18 @@ class EnhancedLedgerMapper:
         if keyword_match and keyword_score >= 50:
             return keyword_match, keyword_score, "keyword_match"
 
-        # Strategy 5: Semantic AI matching
+        # Strategy 5: Match based on ledger-name keywords and overlaps
+        ledger_focus_match, ledger_focus_score = self.ledger_name_focus_match(narration_str, ledger_master)
+        if ledger_focus_match and ledger_focus_score >= 55:
+            return ledger_focus_match, ledger_focus_score, "ledger_name_focus"
+
+        # Strategy 6: Semantic AI matching
         if self.initialized:
             semantic_match, semantic_score = self.semantic_similarity_match(narration_str, threshold=0.3)
             if semantic_match and semantic_score >= 35:
                 return semantic_match, semantic_score, "semantic_ai"
 
-        # Strategy 6: Category-based fallback with name suggestion
+        # Strategy 7: Category-based fallback with name suggestion
         category = self.categorize_transaction(narration_str)
         category_ledgers = {
             'salary': [ledger for ledger in ledger_master if any(word in ledger.lower() for word in ['salary', 'employee', 'staff'])],
@@ -1586,6 +1717,11 @@ def auto_map_ledgers_based_on_rules(narrations_list, ledger_master, rules_config
     """
     auto_mappings = {}
 
+    # Ensure AI model and embeddings are ready for enhanced matching
+    initialize_ai_model()
+    if ledger_mapper.initialized and (ledger_mapper.ledger_master != ledger_master or ledger_mapper.ledger_embeddings is None):
+        ledger_mapper.compute_ledger_embeddings(ledger_master)
+
     # Filter out NaN values before processing to avoid dictionary key issues
     valid_narrations = [n for n in narrations_list if pd.notna(n)]
 
@@ -1623,7 +1759,24 @@ def auto_map_ledgers_based_on_rules(narrations_list, ledger_master, rules_config
             auto_mappings[narration_str] = best_learned_ledger
             continue
             
-        # Strategy 4: Default to suspense ledger
+        # Strategy 4: AI-powered suggestion fallback
+        if ledger_mapper.initialized and ledger_master:
+            try:
+                ai_ledger, confidence, match_type = ledger_mapper.multi_strategy_match(
+                    narration_str,
+                    ledger_master,
+                    rules_config,
+                    suspense_ledger,
+                    learned_mappings
+                )
+
+                if ai_ledger and ai_ledger != suspense_ledger:
+                    auto_mappings[narration_str] = ai_ledger
+                    continue
+            except Exception as e:
+                print(f"AI auto-mapping failed for narration '{narration_str}': {e}")
+
+        # Strategy 5: Default to suspense ledger
         auto_mappings[narration_str] = suspense_ledger
     
     return auto_mappings
@@ -1903,6 +2056,16 @@ def create_bank_tally_xml(df, bank_ledger, company_name):
         company_name=company_name_safe,
         tally_messages="\n".join(all_tally_messages)
     )
+
+def filter_selected_transactions(df):
+    """Return only transactions marked for inclusion."""
+    include_mask = df.get('Include', True)
+
+    # If Include column is missing, assume everything should be processed
+    if isinstance(include_mask, bool):
+        include_mask = pd.Series([include_mask] * len(df))
+
+    return df[include_mask.astype(bool)]
 
 def sync_ledgers_from_tally(host, port, company_name, email):
     """
@@ -2396,7 +2559,7 @@ def render_signup_page():
 
 def render_main_page():
     """Enhanced main page with financial automation dashboard"""
-    
+
     # Header Section
     st.markdown("""
         <div class="dashboard-header">
@@ -2404,93 +2567,154 @@ def render_main_page():
             <div class="dashboard-subtitle">Automate your Tally data entry with AI-powered accuracy</div>
         </div>
     """, unsafe_allow_html=True)
-    
+
+    st.markdown(
+        """
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom: 1.5rem;">
+            <span class="status-indicator status-success">Bank & journal ready</span>
+            <span class="status-indicator status-warning">Human review built-in</span>
+            <span class="status-indicator status-success">Export-ready XML files</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     # Quick Stats Row
     col1, col2, col3, col4 = st.columns(4)
-    
+
     with col1:
-        st.markdown(f"""
+        st.markdown(
+            f"""
             <div class="metric-card">
                 <div class="metric-label">Conversion Accuracy</div>
                 <div class="metric-value">98.7%</div>
-                <div class="metric-trend trend-up">+2.3%</div>
+                <div class="metric-trend trend-up">Consistently improving</div>
             </div>
-        """, unsafe_allow_html=True)
-    
+        """,
+            unsafe_allow_html=True,
+        )
+
     with col2:
-        st.markdown(f"""
+        st.markdown(
+            f"""
             <div class="metric-card">
                 <div class="metric-label">Time Saved</div>
-                <div class="metric-value">85%</div>
-                <div class="metric-trend trend-up">+15%</div>
+                <div class="metric-value">4h/day</div>
+                <div class="metric-trend trend-up">Teams report 85% faster closes</div>
             </div>
-        """, unsafe_allow_html=True)
-    
+        """,
+            unsafe_allow_html=True,
+        )
+
     with col3:
-        st.markdown(f"""
+        st.markdown(
+            f"""
             <div class="metric-card">
-                <div class="metric-label">Active Users</div>
+                <div class="metric-label">Active Workspaces</div>
                 <div class="metric-value">1,247</div>
-                <div class="metric-trend trend-up">+12%</div>
+                <div class="metric-trend trend-up">Growing weekly</div>
             </div>
-        """, unsafe_allow_html=True)
-    
+        """,
+            unsafe_allow_html=True,
+        )
+
     with col4:
-        st.markdown(f"""
+        st.markdown(
+            f"""
             <div class="metric-card">
-                <div class="metric-label">Success Rate</div>
+                <div class="metric-label">Ledger Coverage</div>
                 <div class="metric-value">99.2%</div>
-                <div class="metric-trend trend-up">+0.8%</div>
+                <div class="metric-trend trend-up">Mapping confidence</div>
             </div>
-        """, unsafe_allow_html=True)
-    
+        """,
+            unsafe_allow_html=True,
+        )
+
     # Features Section
     st.markdown("## Core Financial Automation Features")
-    
+
     col1, col2, col3 = st.columns(3)
-    
+
     with col1:
-        st.markdown("""
+        st.markdown(
+            """
             <div class="feature-card">
                 <div class="feature-icon">🏦</div>
                 <div class="feature-title">Smart Bank Reconciliation</div>
                 <div class="feature-description">
-                    Automatically match bank transactions with Tally ledgers using advanced AI. 
-                    Reduce reconciliation time from hours to minutes.
+                    Automatically match bank transactions with Tally ledgers using advanced AI.
+                    Reduce reconciliation time from hours to minutes with built-in exception cues.
                 </div>
             </div>
-        """, unsafe_allow_html=True)
-    
+        """,
+            unsafe_allow_html=True,
+        )
+
     with col2:
-        st.markdown("""
+        st.markdown(
+            """
             <div class="feature-card">
-                <div class="feature-icon">DATA</div>
+                <div class="feature-icon">📑</div>
                 <div class="feature-title">Journal Automation</div>
                 <div class="feature-description">
-                    Convert CSV/Excel journals to Tally XML with intelligent ledger mapping. 
-                    Perfect for payroll, invoices, and expense tracking.
+                    Convert CSV/Excel journals to Tally XML with intelligent ledger mapping.
+                    Perfect for payroll, invoices, and expense tracking with reusable templates.
                 </div>
             </div>
-        """, unsafe_allow_html=True)
-    
+        """,
+            unsafe_allow_html=True,
+        )
+
     with col3:
-        st.markdown("""
+        st.markdown(
+            """
             <div class="feature-card">
                 <div class="feature-icon">⚡</div>
                 <div class="feature-title">Streamlined Data Entry</div>
                 <div class="feature-description">
-                    Automated data processing with template management. 
-                    Eliminate manual entry errors and save valuable accounting time.
+                    Automated data processing with template management.
+                    Eliminate manual entry errors and keep teams aligned with guided reviews.
                 </div>
             </div>
-        """, unsafe_allow_html=True)
-    
+        """,
+            unsafe_allow_html=True,
+        )
+
     st.markdown("---")
-    
+
+    # Guided experience
+    st.markdown("## Your workspace at a glance")
+    exp_col1, exp_col2 = st.columns(2)
+    with exp_col1:
+        st.markdown(
+            """
+            <div class="nav-card">
+                <div class="nav-icon">🧭</div>
+                <div class="nav-title">Guided Bank Workflows</div>
+                <div class="nav-description">Upload statements, review AI matches, and finalize reconciliations with fewer clicks.</div>
+            </div>
+        """,
+            unsafe_allow_html=True,
+        )
+    with exp_col2:
+        st.markdown(
+            """
+            <div class="nav-card">
+                <div class="nav-icon">🧾</div>
+                <div class="nav-title">Bulk Journal Uploads</div>
+                <div class="nav-description">Standardize monthly imports with saved templates and automated ledger suggestions.</div>
+            </div>
+        """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("---")
+
     # How It Works Section
     st.markdown("## How Financial Automation Works")
-    
-    st.markdown("""
+
+    st.markdown(
+        """
         <div class="process-steps">
             <div class="process-step">
                 <div class="step-number">1</div>
@@ -2513,20 +2737,25 @@ def render_main_page():
                 <div class="step-description">Ready-to-import XML</div>
             </div>
         </div>
-    """, unsafe_allow_html=True)
-    
+    """,
+        unsafe_allow_html=True,
+    )
+
     st.markdown("---")
-    
+
     # CTA Section with Login/Signup
-    st.markdown("""
+    st.markdown(
+        """
         <div style="text-align: center; padding: 3rem 1rem;">
-            <h2 style="color: #333; margin-bottom: 1rem;">Ready to Transform Your Accounting Workflow?</h2>
-            <p style="color: #666; margin-bottom: 2rem; font-size: 1.1rem;">
-                Join thousands of businesses automating their financial processes with Xml2Tally
+            <h2 style="color: #333; margin-bottom: 1rem;">Ready to transform your accounting workflow?</h2>
+            <p style="color: #666; margin-bottom: 1.5rem; font-size: 1.05rem;">
+                Start with guided flows or jump straight into conversions with your existing templates.
             </p>
         </div>
-    """, unsafe_allow_html=True)
-    
+    """,
+        unsafe_allow_html=True,
+    )
+
     col1, col2, col3 = st.columns([1, 3, 1])
     with col2:
         auth_col1, auth_col2 = st.columns(2)
@@ -2538,6 +2767,15 @@ def render_main_page():
             if st.button("Start Free Trial", use_container_width=True):
                 st.session_state.current_view = "signup"
                 st.rerun()
+
+        st.markdown(
+            """
+            <div style="margin-top: 1.2rem; color: #4a5568; font-size: 0.95rem; text-align: center;">
+                No setup required • Works with existing Tally ledgers • Support team on standby
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     # Footer
     st.markdown("---")
@@ -3114,22 +3352,55 @@ def render_bank_converter_page():
     if enable_direct_push and tally_company_name:
         company_name = tally_company_name
 
-    ledger_master = st.session_state.get('ledger_master', ["Bank Suspense A/c (Default)"])
-    suspense_ledger = st.session_state.get('default_suspense_ledger', None)
+    ledger_master = st.session_state.get('ledger_master', [])
+    if not ledger_master:
+        synced_ledgers = get_synced_ledgers(st.session_state.email)
+        ledger_master = [row[0] for row in synced_ledgers] if synced_ledgers else []
+
+    if not ledger_master:
+        ledger_master = ["Bank Suspense A/c (Default)"]
+
     rules_config = st.session_state.get('bank_rules', [])
     learned_mappings = st.session_state.get('learned_mappings', {})
 
-    # Check setup requirements
-    if not suspense_ledger or suspense_ledger == "Bank Suspense A/c (Default)":
-        st.warning("""
-            **Setup Required**: Please set your **Default Suspense Ledger** in the **Settings** page.
-            
-            This account will be used for transactions that cannot be automatically matched.
-        """)
-        if st.button("Go to Settings", use_container_width=True):
-            st.session_state.current_view = "settings"
-            st.rerun()
-        st.stop()
+    suspense_ledger_options = ledger_master.copy()
+    current_suspense = st.session_state.get('default_suspense_ledger', "Bank Suspense A/c (Default)")
+    if current_suspense not in suspense_ledger_options:
+        suspense_ledger_options = [current_suspense] + suspense_ledger_options
+
+    suspense_index = suspense_ledger_options.index(current_suspense) if current_suspense in suspense_ledger_options else 0
+
+    st.subheader("Suspense Ledger for Unmapped Bank Entries")
+    st.caption("Select which ledger should receive transactions that cannot be auto-mapped during bank sync.")
+    selected_suspense_ledger = st.selectbox(
+        "Choose suspense ledger (synced from Tally):",
+        options=suspense_ledger_options,
+        index=suspense_index,
+        key="bank_page_suspense_ledger",
+        help="Pick the Tally ledger to use for unmatched bank transactions."
+    )
+
+    if selected_suspense_ledger != st.session_state.get('default_suspense_ledger'):
+        st.session_state.default_suspense_ledger = selected_suspense_ledger
+
+    if st.button("Save suspense ledger preference", type="secondary", use_container_width=True):
+        try:
+            conn = get_db_conn()
+            with conn.session as s:
+                s.execute(text('''
+                    INSERT INTO user_preferences (email, default_suspense_ledger)
+                    VALUES (:email, :suspense)
+                    ON CONFLICT(email) DO UPDATE SET default_suspense_ledger = :suspense
+                '''), params=dict(email=st.session_state.email, suspense=selected_suspense_ledger))
+                s.commit()
+            st.success("Suspense ledger preference saved for future sessions.")
+        except Exception as e:
+            st.error(f"Failed to save suspense ledger preference: {e}")
+
+    suspense_ledger = selected_suspense_ledger
+
+    if suspense_ledger == "Bank Suspense A/c (Default)":
+        st.warning("Consider selecting a suspense ledger synced from Tally to improve mapping accuracy.")
     
     # Process Steps
     st.markdown("""
@@ -3204,25 +3475,37 @@ def render_bank_converter_page():
         try:
             # Process file
             df = pd.read_csv(uploaded_file, encoding='latin1') if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
-            df.columns = [str(c).strip().title() for c in df.columns] 
-            
+            df.columns = [str(c).strip().title() for c in df.columns]
+
             # Validate required columns
             for col in ['Date', 'Narration', 'Debit', 'Credit']:
                 if col not in df.columns:
                     st.error(f"Required column '{col}' not found in file. Please use the template.")
                     st.stop()
-            
+
             # Convert numeric columns
             for col in ['Debit', 'Credit']:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
             # Set default ledger for all transactions
             df['Mapped Ledger'] = suspense_ledger
-            
+            # Allow users to choose which transactions to include in export/push
+            df['Include'] = True
+
+            # Preserve mapping edits (including bulk selection) while the same file is active
+            if (
+                'bank_mapping_df' not in st.session_state
+                or st.session_state.get('bank_mapping_file') != uploaded_file.name
+            ):
+                st.session_state.bank_mapping_df = df.copy()
+                st.session_state.bank_mapping_file = uploaded_file.name
+            else:
+                df = st.session_state.bank_mapping_df.copy()
+
             st.success(f"Bank statement processed! {len(df)} transactions ready for mapping.")
-            
+
             st.divider()
-            
+
             # Step 4: Mapping Section with Auto-Map Button
             st.subheader("4. Map Transactions to Ledgers")
             
@@ -3269,7 +3552,10 @@ def render_bank_converter_page():
                                     updated_count += 1
                         
                         st.success(f"Auto-mapped {updated_count} transactions!")
-                        
+
+                        # Persist auto-mapped updates for this file session
+                        st.session_state.bank_mapping_df = df.copy()
+
                         # Show mapping statistics
                         if updated_count > 0:
                             mapping_sources = {}
@@ -3295,22 +3581,31 @@ def render_bank_converter_page():
 
             # Data editor for manual mapping
             st.write(f"Mapping {len(df)} transactions. Select the correct ledger for each transaction:")
-            
+
+            working_df = st.session_state.bank_mapping_df.copy()
+
             edited_df = st.data_editor(
-                df[['Date', 'Narration', 'Debit', 'Credit', 'Mapped Ledger']],
+                working_df[['Date', 'Narration', 'Debit', 'Credit', 'Mapped Ledger', 'Include']],
                 column_config={
                     "Mapped Ledger": st.column_config.SelectboxColumn(
                         "Mapped Ledger",
                         help="Select the Tally ledger for this transaction",
                         options=ledger_master,
                         required=True,
-                    )
+                    ),
+                    "Include": st.column_config.CheckboxColumn(
+                        "Include",
+                        help="Uncheck to skip pushing/downloading this transaction",
+                        default=True,
+                    ),
                 },
                 use_container_width=True,
                 hide_index=True,
                 num_rows="dynamic",
                 key="bank_mapping_editor"
             )
+
+            st.session_state.bank_mapping_df = edited_df.copy()
 
             st.divider()
 
@@ -3321,9 +3616,14 @@ def render_bank_converter_page():
             if enable_direct_push:
                 # Show Direct Push button as primary action
                 if st.button("🚀 Direct Push to Tally", type="primary", use_container_width=True):
+                    selected_df = filter_selected_transactions(edited_df)
+                    if selected_df.empty:
+                        st.warning("Please select at least one transaction to push to Tally.")
+                        st.stop()
+
                     # Automatically learn from user mappings
                     learned_count = 0
-                    for index, row in edited_df.iterrows():
+                    for index, row in selected_df.iterrows():
                         narration = str(row['Narration'])
                         mapped_ledger = row['Mapped Ledger']
 
@@ -3341,7 +3641,7 @@ def render_bank_converter_page():
 
                     with st.spinner("Pushing bank vouchers to Tally..."):
                         xml_data = create_bank_tally_xml(
-                            edited_df,
+                            selected_df,
                             bank_ledger,
                             company_name
                         )
@@ -3368,9 +3668,14 @@ def render_bank_converter_page():
 
                 # Show Download XML as secondary option
                 if st.button("📥 Download Bank XML (Backup)", use_container_width=True):
+                    selected_df = filter_selected_transactions(edited_df)
+                    if selected_df.empty:
+                        st.warning("Please select at least one transaction to download.")
+                        st.stop()
+
                     # Automatically learn from user mappings
                     learned_count = 0
-                    for index, row in edited_df.iterrows():
+                    for index, row in selected_df.iterrows():
                         narration = str(row['Narration'])
                         mapped_ledger = row['Mapped Ledger']
 
@@ -3388,7 +3693,7 @@ def render_bank_converter_page():
 
                     with st.spinner("Generating Tally XML..."):
                         xml_data = create_bank_tally_xml(
-                            edited_df,
+                            selected_df,
                             bank_ledger,
                             company_name
                         )
@@ -3404,9 +3709,14 @@ def render_bank_converter_page():
             else:
                 # Show only Generate XML button when direct push is disabled
                 if st.button("Generate Tally XML", type="primary", use_container_width=True):
+                    selected_df = filter_selected_transactions(edited_df)
+                    if selected_df.empty:
+                        st.warning("Please select at least one transaction to include in the XML.")
+                        st.stop()
+
                     # Automatically learn from user mappings when they generate XML
                     learned_count = 0
-                    for index, row in edited_df.iterrows():
+                    for index, row in selected_df.iterrows():
                         narration = str(row['Narration'])
                         mapped_ledger = row['Mapped Ledger']
 
@@ -3424,7 +3734,7 @@ def render_bank_converter_page():
 
                     with st.spinner("Generating Tally XML..."):
                         xml_data = create_bank_tally_xml(
-                            edited_df,
+                            selected_df,
                             bank_ledger,
                             company_name
                         )
@@ -3450,7 +3760,7 @@ def render_settings_page():
         </div>
     """, unsafe_allow_html=True)
     
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Company", "Journals", "Bank Rules", "AI Settings", "Tally Integration"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Company", "Journals", "AI Settings", "Tally Integration"])
 
     with tab1:
         st.subheader("Company Settings")
@@ -3633,213 +3943,6 @@ def render_settings_page():
                     st.rerun()
 
     with tab3:
-        st.subheader("Bank Reconciliation Settings")
-        
-        # Ledger Master Options
-        st.markdown("#### 1. Setup Ledger Master")
-        st.write("Choose how you want to provide your Tally ledger information:")
-        
-        ledger_option = st.radio(
-            "Select ledger input method:",
-            ["Upload Tally Ledger Master", "Enter Ledgers Manually"],
-            horizontal=True
-        )
-        
-        if ledger_option == "Upload Tally Ledger Master":
-            # Existing file upload functionality
-            st.markdown("##### Upload Ledger Master")
-            st.write("Export your 'List of Accounts' from Tally and upload it here.")
-            
-            ledger_file = st.file_uploader("Upload Tally Ledger Master", type=["csv", "xlsx"], key="ledger_master_uploader")
-            
-            if ledger_file:
-                try:
-                    df = pd.read_csv(ledger_file, encoding='latin1') if ledger_file.name.endswith('.csv') else pd.read_excel(ledger_file)
-                    df.columns = [str(c).strip().title() for c in df.columns] 
-                    
-                    if 'Ledger Name' not in df.columns:
-                        st.error("File must have a column named 'Ledger Name'. Please check your export.")
-                    else:
-                        ledgers_list = df['Ledger Name'].dropna().astype(str).unique().tolist()
-                        ledgers_list.sort() 
-                        
-                        conn = get_db_conn()
-                        with conn.session as s:
-                            s.execute(text('DELETE FROM bank_ledger_master WHERE email = :email'), params=dict(email=st.session_state.email))
-                            for ledger in ledgers_list:
-                                s.execute(text('INSERT INTO bank_ledger_master (email, ledger_name) VALUES (:email, :ledger)'), params=dict(email=st.session_state.email, ledger=ledger))
-                            s.commit()
-                        
-                        st.session_state.ledger_master = ledgers_list 
-                        st.success(f"Successfully uploaded {len(ledgers_list)} ledgers!")
-                        
-                except Exception as e:
-                    st.error(f"Error uploading ledger master: {e}")
-        
-        else:  # Manual entry
-            st.markdown("##### Enter Ledgers Manually")
-            st.write("Add your Tally ledger names one by one:")
-            
-            # Initialize manual ledgers in session state if not exists
-            if 'manual_ledgers' not in st.session_state:
-                st.session_state.manual_ledgers = st.session_state.get('ledger_master', []).copy()
-                # Remove default ledger if present
-                if "Bank Suspense A/c (Default)" in st.session_state.manual_ledgers:
-                    st.session_state.manual_ledgers.remove("Bank Suspense A/c (Default)")
-            
-            # Manual ledger entry
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                new_ledger = st.text_input("Add new ledger:", placeholder="Enter ledger name (e.g., Cash A/c, Sales A/c)")
-            with col2:
-                st.write("")  # Spacing
-                if st.button("➕ Add", use_container_width=True):
-                    if new_ledger and new_ledger.strip():
-                        if new_ledger.strip() not in st.session_state.manual_ledgers:
-                            st.session_state.manual_ledgers.append(new_ledger.strip())
-                            st.session_state.manual_ledgers.sort()
-                            st.rerun()
-                        else:
-                            st.warning("Ledger already exists!")
-                    else:
-                        st.warning("Please enter a ledger name")
-            
-            # Display and manage current ledgers
-            if st.session_state.manual_ledgers:
-                st.write(f"**Current Ledgers ({len(st.session_state.manual_ledgers)}):**")
-                
-                # Create a dataframe for better display and editing
-                ledger_df = pd.DataFrame({
-                    'Ledger Name': st.session_state.manual_ledgers
-                })
-                
-                edited_ledger_df = st.data_editor(
-                    ledger_df,
-                    num_rows="dynamic",
-                    column_config={
-                        "Ledger Name": st.column_config.TextColumn(
-                            "Ledger Name",
-                            help="Tally ledger name",
-                            required=True
-                        )
-                    },
-                    use_container_width=True,
-                    key="manual_ledger_editor"
-                )
-                
-                # Update session state with edited data
-                if not edited_ledger_df.empty:
-                    updated_ledgers = edited_ledger_df['Ledger Name'].dropna().tolist()
-                    updated_ledgers = [ledger.strip() for ledger in updated_ledgers if ledger.strip()]
-                    updated_ledgers.sort()
-                    st.session_state.manual_ledgers = updated_ledgers
-                
-                # Save manual ledgers button
-                if st.button("Save Manual Ledgers", use_container_width=True):
-                    if st.session_state.manual_ledgers:
-                        conn = get_db_conn()
-                        with conn.session as s:
-                            s.execute(text('DELETE FROM bank_ledger_master WHERE email = :email'), params=dict(email=st.session_state.email))
-                            for ledger in st.session_state.manual_ledgers:
-                                s.execute(text('INSERT INTO bank_ledger_master (email, ledger_name) VALUES (:email, :ledger)'), params=dict(email=st.session_state.email, ledger=ledger))
-                            s.commit()
-                        
-                        st.session_state.ledger_master = st.session_state.manual_ledgers.copy()
-                        st.success(f"Successfully saved {len(st.session_state.manual_ledgers)} ledgers!")
-                    else:
-                        st.error("No ledgers to save!")
-            else:
-                st.info("No ledgers added yet. Use the form above to add your Tally ledger names.")
-        
-        st.divider()
-        
-        # Suspense Ledger
-        st.markdown("#### 2. Set Default Suspense Ledger")
-        st.write("Transactions that can't be automatically matched will go to this ledger.")
-        
-        # Get current ledger options (either from uploaded or manual)
-        current_ledgers = st.session_state.get('ledger_master', [])
-        if not current_ledgers or current_ledgers == ["Bank Suspense A/c (Default)"]:
-            st.warning("Please setup your Ledger Master above to select a suspense account.")
-        else:
-            current_suspense = st.session_state.default_suspense_ledger
-            # Ensure current suspense is in the list, if not add it
-            if current_suspense not in current_ledgers:
-                current_ledgers.insert(0, current_suspense)
-            
-            suspense_index = current_ledgers.index(current_suspense) if current_suspense in current_ledgers else 0
-            
-            st.selectbox(
-                "Default Suspense Account:",
-                options=current_ledgers,
-                index=suspense_index,
-                key="suspense_ledger_select"
-            )
-
-        st.divider()
-        
-        # Smart Rules
-        st.markdown("#### 3. Configure Smart Rules")
-        st.write("Create rules to automatically map specific keywords to Tally ledgers.")
-        
-        if not st.session_state.bank_rules:
-            st.session_state.bank_rules = [{'Narration Keyword': '', 'Mapped Ledger': ''}]
-        
-        rules_df = pd.DataFrame(st.session_state.bank_rules)
-        
-        # Get current ledger options for dropdown
-        current_ledgers = st.session_state.get('ledger_master', ["Bank Suspense A/c (Default)"])
-        
-        edited_rules_df = st.data_editor(
-            rules_df,
-            num_rows="dynamic",
-            column_config={
-                "Narration Keyword": st.column_config.TextColumn(
-                    "Keyword to Match", 
-                    help="e.g., 'AMAZON' or 'RENT' - will match if narration contains this keyword",
-                    required=True
-                ),
-                "Mapped Ledger": st.column_config.SelectboxColumn(
-                    "Mapped Ledger",
-                    help="Select the Tally ledger to map when keyword is found",
-                    options=current_ledgers,
-                    required=True
-                )
-            },
-            use_container_width=True,
-            key="bank_rules_editor"
-        )
-        
-        if st.button("Save All Bank Settings", type="primary", use_container_width=True):
-            # Save all bank settings
-            rules_to_save = edited_rules_df.to_dict('records')
-
-            conn = get_db_conn()
-            with conn.session as s:
-                # Update suspense ledger (if it was configured)
-                new_suspense = st.session_state.get('suspense_ledger_select', st.session_state.default_suspense_ledger)
-                s.execute(text('''
-                    INSERT INTO user_preferences (email, default_suspense_ledger) VALUES (:email, :suspense)
-                    ON CONFLICT(email) DO UPDATE SET default_suspense_ledger = :suspense
-                '''), params=dict(email=st.session_state.email, suspense=new_suspense))
-                
-                # Save smart rules
-                s.execute(text('DELETE FROM bank_rules WHERE email = :email'), params=dict(email=st.session_state.email))
-                
-                for rule in rules_to_save:
-                    s.execute(text('''
-                        INSERT INTO bank_rules (email, keyword, mapped_ledger) 
-                        VALUES (:email, :keyword, :ledger)
-                    '''), params=dict(email=st.session_state.email, keyword=rule['Narration Keyword'], ledger=rule['Mapped Ledger']))
-                
-                s.commit()
-            
-            st.session_state.default_suspense_ledger = new_suspense
-            st.session_state.bank_rules = rules_to_save
-            st.success("All bank settings saved successfully!")
-            st.rerun()
-
-    with tab4:
         st.subheader("AI Learning & Configuration")
         
         # AI Status
@@ -3920,7 +4023,7 @@ def render_settings_page():
         else:
             st.info("No learned mappings yet. The AI will start learning automatically as you map transactions in the Journal and Bank converters.")
 
-    with tab5:
+    with tab4:
         st.subheader("Tally Direct Integration")
         st.markdown("""
             <div style="background-color: #e8f4f8; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;">
@@ -4090,8 +4193,6 @@ def render_settings_page():
                         help="When enabled, journal vouchers will be pushed directly to Tally"
                     )
 
-        st.divider()
-
         col1, col2, col3 = st.columns([2, 2, 1])
         with col1:
             if st.button("Save Tally Integration Settings", type="primary", use_container_width=True):
@@ -4099,6 +4200,7 @@ def render_settings_page():
                 company_name = st.session_state.tally_company_name
                 if not st.session_state.detected_companies and 'tally_company_input' in st.session_state:
                     company_name = st.session_state.tally_company_input
+
 
                 conn = get_db_conn()
                 with conn.session as s:
@@ -4127,6 +4229,7 @@ def render_settings_page():
                         push_journal=st.session_state.direct_push_journal_checkbox,
                         sync_on_load=st.session_state.sync_on_load_checkbox
                     ))
+
                     s.commit()
 
                 # Update session state with saved values
