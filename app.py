@@ -4,6 +4,7 @@ import io
 import os
 from datetime import datetime, timedelta, date
 import hashlib
+import bcrypt
 from html import escape
 import difflib
 from sqlalchemy.sql import text
@@ -773,8 +774,33 @@ def get_db_conn():
     return st.connection("users_db", type="sql", url="sqlite:///data/users.db")
 
 def hash_password(password):
+    return bcrypt.hashpw(str(password).encode(), bcrypt.gensalt()).decode()
+
+
+def _legacy_hash_password(password):
     return hashlib.sha256(str(password).encode()).hexdigest()
 
+
+def verify_password(password, stored_hash):
+    if not stored_hash:
+        return False, False
+
+    password_bytes = str(password).encode()
+
+    if stored_hash.startswith("$2"):
+        try:
+            return bcrypt.checkpw(password_bytes, stored_hash.encode()), False
+        except ValueError:
+            return False, False
+
+    if len(stored_hash) == 64 and all(c in "0123456789abcdef" for c in stored_hash.lower()):
+        legacy_hash = _legacy_hash_password(password)
+        return legacy_hash == stored_hash, True
+
+    return False, False
+
+def init_db():
+    """Initializes the database schema using st.connection."""
 def init_db(seed_admin=None, admin_password=None):
     """Initializes the database schema using st.connection.
 
@@ -889,6 +915,26 @@ def init_db(seed_admin=None, admin_password=None):
             );
         '''))
 
+        # Add/Update Admin User
+        try:
+            admin_pass_hash = hash_password("admin@2003")
+            s.execute(text('''
+                INSERT INTO users (email, name, phone, password_hash, signup_date, subscription_expiry_date)
+                VALUES (:email, :name, :phone, :pass_hash, DATE('now'), DATE('now', '+100 year'))
+                ON CONFLICT(email) DO UPDATE SET
+                    name=excluded.name,
+                    phone=excluded.phone,
+                    password_hash=excluded.password_hash,
+                    subscription_expiry_date=excluded.subscription_expiry_date
+            '''), params=dict(
+                email="admin",
+                name="Administrator",
+                phone="0000000000",
+                pass_hash=admin_pass_hash
+            ))
+            s.commit()
+        except Exception as e:
+            print(f"Admin user creation: {e}")
         # Add Admin User (seeded only when enabled)
         should_seed_admin = seed_admin
         if should_seed_admin is None:
@@ -935,13 +981,12 @@ def add_user_to_db(email, name, phone, password):
 def check_user_status(email, password):
     """Checks credentials and returns status."""
     try:
-        password_hash = hash_password(password)
         conn = get_db_conn()
         with conn.session as s:
             user_data = s.execute(text('''
-                SELECT signup_date, subscription_expiry_date FROM users
-                WHERE email = :email AND password_hash = :pass_hash
-            '''), params=dict(email=email, pass_hash=password_hash)).fetchone()
+                SELECT password_hash, signup_date, subscription_expiry_date FROM users
+                WHERE email = :email
+            '''), params=dict(email=email)).fetchone()
 
         if not user_data:
             return "INVALID"
@@ -949,9 +994,28 @@ def check_user_status(email, password):
         print(f"Error checking user status: {e}")
         return "INVALID"
 
+    stored_hash, signup_date_str, sub_expiry_str = user_data
+    try:
+        is_valid, needs_upgrade = verify_password(password, stored_hash)
+    except Exception as e:
+        print(f"Password verification failed for {email}: {e}")
+        return "INVALID"
+
+    if not is_valid:
+        return "INVALID"
+
+    if needs_upgrade:
+        try:
+            new_hash = hash_password(password)
+            with conn.session as s:
+                s.execute(text('UPDATE users SET password_hash = :new_hash WHERE email = :email'),
+                          params=dict(new_hash=new_hash, email=email))
+                s.commit()
+        except Exception as e:
+            print(f"Password upgrade error for {email}: {e}")
+
     today = date.today()
-    
-    sub_expiry_str = user_data[1]
+
     if sub_expiry_str:
         try:
             sub_expiry_date = datetime.strptime(sub_expiry_str, '%Y-%m-%d').date()
@@ -960,7 +1024,6 @@ def check_user_status(email, password):
         except ValueError:
             pass
 
-    signup_date_str = user_data[0]
     if signup_date_str:
         try:
             signup_date = datetime.strptime(signup_date_str, '%Y-%m-%d').date()
