@@ -671,6 +671,21 @@ def load_css():
     """
     st.markdown(css, unsafe_allow_html=True)
 
+
+@st.cache_resource(show_spinner=False)
+def get_sentence_transformer_model():
+    """Cache the SentenceTransformer model to avoid repeated downloads/loads."""
+    return SentenceTransformer('all-MiniLM-L6-v2')
+
+
+@st.cache_data(show_spinner=False)
+def load_uploaded_file(file_bytes, filename):
+    """Load uploaded CSV/XLSX data with caching for faster reruns."""
+    buffer = io.BytesIO(file_bytes)
+    if filename.lower().endswith(".csv"):
+        return pd.read_csv(buffer, encoding='latin1')
+    return pd.read_excel(buffer)
+
 # --- 2. POLICY TEXT TEMPLATES ---
 PRIVACY_POLICY_TEXT = """
 ## Privacy Policy
@@ -1163,6 +1178,7 @@ class EnhancedLedgerMapper:
         self.model = None
         self.ledger_embeddings = None
         self.ledger_master = None
+        self.ledger_keyword_index = None
         self.initialized = False
         
     def initialize_model(self):
@@ -1173,7 +1189,7 @@ class EnhancedLedgerMapper:
             
         try:
             with st.spinner("Loading AI model for semantic matching..."):
-                self.model = SentenceTransformer('all-MiniLM-L6-v2')
+                self.model = get_sentence_transformer_model()
                 self.initialized = True
                 st.success("Semantic AI model loaded successfully!")
                 return True
@@ -1392,6 +1408,15 @@ class EnhancedLedgerMapper:
 
         return ledger_index
 
+    def ensure_ledger_index(self, ledger_master):
+        """Ensure ledger keyword index is prepared for the current ledger master."""
+        if not ledger_master:
+            return None
+        if self.ledger_master != ledger_master or self.ledger_keyword_index is None:
+            self.ledger_keyword_index = self.build_ledger_keyword_index(ledger_master)
+            self.ledger_master = ledger_master
+        return self.ledger_keyword_index
+
     def ledger_name_focus_match(self, narration, ledger_master):
         """Prioritize matches that align closely with ledger names"""
         clean_narration = self.preprocess_narration(narration)
@@ -1400,7 +1425,9 @@ class EnhancedLedgerMapper:
         if not narration_words or not ledger_master:
             return None, 0
 
-        ledger_index = self.build_ledger_keyword_index(ledger_master)
+        ledger_index = self.ensure_ledger_index(ledger_master)
+        if not ledger_index:
+            return None, 0
         best_ledger = None
         best_score = 0
 
@@ -1433,6 +1460,7 @@ class EnhancedLedgerMapper:
             processed_ledgers = [self.preprocess_narration(ledger) for ledger in ledger_master]
             self.ledger_embeddings = self.model.encode(processed_ledgers, convert_to_tensor=True)
             self.ledger_master = ledger_master
+            self.ledger_keyword_index = self.build_ledger_keyword_index(ledger_master)
             return True
         except Exception as e:
             print(f"Error computing ledger embeddings: {e}")
@@ -3103,7 +3131,7 @@ def render_journal_converter_page():
     if uploaded_file:
         try:
             # Process file
-            df = pd.read_csv(uploaded_file, encoding='latin1') if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
+            df = load_uploaded_file(uploaded_file.getvalue(), uploaded_file.name)
             
             st.success(f"File processed successfully! Found {len(df)} journal entries.")
             
@@ -3479,7 +3507,7 @@ def render_bank_converter_page():
     if uploaded_file and bank_ledger:
         try:
             # Process file
-            df = pd.read_csv(uploaded_file, encoding='latin1') if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
+            df = load_uploaded_file(uploaded_file.getvalue(), uploaded_file.name)
             df.columns = [str(c).strip().title() for c in df.columns]
 
             # Validate required columns
