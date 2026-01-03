@@ -3542,8 +3542,8 @@ def render_bank_converter_page():
             # Step 4: Mapping Section with Auto-Map Button
             st.subheader("4. Map Transactions to Ledgers")
             
-            # Auto-map button
-            col1, col2, col3 = st.columns([2, 1, 1])
+            # Auto-map button and reset option
+            col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
             with col1:
                 st.info("""
                 **Smart Mapping:**
@@ -3551,11 +3551,11 @@ def render_bank_converter_page():
                 - Automatically suggests ledgers based on previous decisions
                 - Updates only unmapped transactions by default
                 """)
-            
+
             with col2:
-                overwrite_existing = st.checkbox("Overwrite existing mappings", value=False, 
+                overwrite_existing = st.checkbox("Overwrite existing mappings", value=False,
                                                help="If checked, will replace ALL mappings. If unchecked, only updates suspense ledger mappings.")
-            
+
             with col3:
                 if st.button("Auto Map Ledgers", use_container_width=True, type="secondary"):
                     with st.spinner("Applying smart rules and learned mappings..."):
@@ -3604,6 +3604,13 @@ def render_bank_converter_page():
                             
                             if mapping_sources:
                                 st.info(f"**Mapping Sources:** {', '.join([f'{k}: {v}' for k, v in mapping_sources.items()])}")
+
+            with col4:
+                if st.button("Reset Auto Mapping", use_container_width=True):
+                    # Revert all mapped ledgers back to the chosen suspense ledger
+                    df['Mapped Ledger'] = suspense_ledger
+                    st.session_state.bank_mapping_df = df.copy()
+                    st.success(f"Reset all mappings to suspense ledger: {suspense_ledger}")
 
             st.info("""
             **Manual Mapping Instructions:**
