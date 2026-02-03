@@ -2095,6 +2095,19 @@ def filter_selected_transactions(df):
 
     return df[include_mask.astype(bool)]
 
+def sanitize_tally_response(xml_text):
+    """Clean common XML issues in Tally responses (invalid chars, unescaped ampersands)."""
+    if not xml_text:
+        return xml_text
+
+    cleaned = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F]', '', xml_text)
+    cleaned = re.sub(
+        r'&(?!amp;|lt;|gt;|apos;|quot;|#\d+;|#x[0-9A-Fa-f]+;)',
+        '&amp;',
+        cleaned
+    )
+    return cleaned
+
 def sync_ledgers_from_tally(host, port, company_name, email):
     """
     Fetches ledger list from Tally and stores in database.
@@ -2140,7 +2153,8 @@ def sync_ledgers_from_tally(host, port, company_name, email):
 
         # Parse XML response
         try:
-            root = ET.fromstring(response.text)
+            cleaned_response = sanitize_tally_response(response.text)
+            root = ET.fromstring(cleaned_response)
         except ET.ParseError as e:
             return False, f"Failed to parse Tally response: {str(e)}", 0
 
@@ -2219,7 +2233,8 @@ def push_vouchers_to_tally(xml_data, host, port):
 
         # Parse response to check for errors and actual success
         try:
-            root = ET.fromstring(response.text)
+            cleaned_response = sanitize_tally_response(response.text)
+            root = ET.fromstring(cleaned_response)
 
             # Log the response for debugging (to console/logs)
             st.write("### 🔍 Tally Response Debug Info")
@@ -2347,7 +2362,8 @@ def fetch_companies_from_tally(host, port):
 
         # Parse XML response to extract company names
         try:
-            root = ET.fromstring(response.text)
+            cleaned_response = sanitize_tally_response(response.text)
+            root = ET.fromstring(cleaned_response)
         except ET.ParseError as e:
             return False, f"Failed to parse Tally response: {str(e)}", []
 
