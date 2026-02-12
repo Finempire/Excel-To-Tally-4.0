@@ -2108,6 +2108,60 @@ def sanitize_tally_response(xml_text):
     )
     return cleaned
 
+def normalize_tally_host(host):
+    """Normalize host values entered by users (strip scheme/path)."""
+    host = (host or '').strip()
+    host = re.sub(r'^https?://', '', host, flags=re.IGNORECASE)
+    host = host.split('/')[0]
+    return host
+
+def get_tally_host_candidates(host):
+    """Return fallback hosts when localhost-style addresses are used."""
+    normalized_host = normalize_tally_host(host)
+    host_candidates = [normalized_host]
+
+    local_aliases = {'localhost', '127.0.0.1', '0.0.0.0', '::1'}
+    if normalized_host in local_aliases:
+        for candidate in ['localhost', '127.0.0.1', 'host.docker.internal']:
+            if candidate not in host_candidates:
+                host_candidates.append(candidate)
+
+    return [candidate for candidate in host_candidates if candidate]
+
+def post_to_tally_with_fallback(host, port, data, timeout):
+    """POST to Tally, trying sensible localhost fallbacks when needed."""
+    headers = {'Content-Type': 'text/xml'}
+    host_candidates = get_tally_host_candidates(host)
+    last_error = None
+
+    for candidate in host_candidates:
+        try:
+            url = f"http://{candidate}:{port}"
+            response = requests.post(url, data=data, headers=headers, timeout=timeout)
+            return response, candidate, host_candidates
+        except requests.exceptions.ConnectionError as err:
+            last_error = err
+            continue
+
+    if last_error:
+        raise last_error
+
+    raise requests.exceptions.ConnectionError(f"Unable to resolve a valid Tally host from '{host}'")
+
+def get_tally_connection_error_message(host, port, host_candidates):
+    if len(host_candidates) > 1:
+        attempted_hosts = ', '.join(host_candidates)
+        return (
+            f"Could not connect to Tally server at {host}:{port}. "
+            f"Tried hosts: {attempted_hosts}. "
+            "Please ensure Tally is running with web server enabled and use a reachable server IP/hostname."
+        )
+
+    return (
+        f"Could not connect to Tally server at {host}:{port}. "
+        "Please ensure Tally is running with web server enabled and use a reachable server IP/hostname."
+    )
+
 def sync_ledgers_from_tally(host, port, company_name, email):
     """
     Fetches ledger list from Tally and stores in database.
@@ -2143,10 +2197,7 @@ def sync_ledgers_from_tally(host, port, company_name, email):
         '''
 
         # Send request to Tally
-        url = f"http://{host}:{port}"
-        headers = {'Content-Type': 'text/xml'}
-
-        response = requests.post(url, data=tally_request, headers=headers, timeout=10)
+        response, _, _ = post_to_tally_with_fallback(host, port, tally_request, timeout=10)
 
         if response.status_code != 200:
             return False, f"Tally server returned error: {response.status_code}", 0
@@ -2207,7 +2258,7 @@ def sync_ledgers_from_tally(host, port, company_name, email):
         return True, f"Successfully synced {len(ledgers)} ledgers from Tally", len(ledgers)
 
     except requests.exceptions.ConnectionError:
-        return False, f"Could not connect to Tally server at {host}:{port}. Please ensure Tally is running with web server enabled.", 0
+        return False, get_tally_connection_error_message(host, port, get_tally_host_candidates(host)), 0
     except requests.exceptions.Timeout:
         return False, "Connection to Tally server timed out. Please try again.", 0
     except Exception as e:
@@ -2220,10 +2271,7 @@ def push_vouchers_to_tally(xml_data, host, port):
     """
     try:
         # Send XML data to Tally server
-        url = f"http://{host}:{port}"
-        headers = {'Content-Type': 'text/xml'}
-
-        response = requests.post(url, data=xml_data, headers=headers, timeout=30)
+        response, _, _ = post_to_tally_with_fallback(host, port, xml_data, timeout=30)
 
         if response.status_code != 200:
             return False, f"Tally server returned error: {response.status_code}", 0
@@ -2293,7 +2341,7 @@ def push_vouchers_to_tally(xml_data, host, port):
             return False, f"Could not parse Tally response. Raw response:\n{response.text[:500]}\n\nParse error: {str(parse_err)}", 0
 
     except requests.exceptions.ConnectionError:
-        return False, f"Could not connect to Tally server at {host}:{port}. Please ensure Tally is running with web server enabled.", 0
+        return False, get_tally_connection_error_message(host, port, get_tally_host_candidates(host)), 0
     except requests.exceptions.Timeout:
         return False, "Connection to Tally server timed out. Please try again.", 0
     except Exception as e:
@@ -2352,10 +2400,7 @@ def fetch_companies_from_tally(host, port):
         '''
 
         # Send request to Tally
-        url = f"http://{host}:{port}"
-        headers = {'Content-Type': 'text/xml'}
-
-        response = requests.post(url, data=tally_request, headers=headers, timeout=10)
+        response, _, _ = post_to_tally_with_fallback(host, port, tally_request, timeout=10)
 
         if response.status_code != 200:
             return False, f"Tally server returned error: {response.status_code}", []
@@ -2397,7 +2442,7 @@ def fetch_companies_from_tally(host, port):
         return True, f"Successfully detected {len(companies)} company(ies) from Tally", companies
 
     except requests.exceptions.ConnectionError:
-        return False, f"Could not connect to Tally server at {host}:{port}. Please ensure Tally is running with web server enabled.", []
+        return False, get_tally_connection_error_message(host, port, get_tally_host_candidates(host)), []
     except requests.exceptions.Timeout:
         return False, "Connection to Tally server timed out. Please try again.", []
     except Exception as e:
