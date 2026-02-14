@@ -2122,7 +2122,15 @@ def get_tally_host_candidates(host):
 
     local_aliases = {'localhost', '127.0.0.1', '0.0.0.0', '::1'}
     if normalized_host in local_aliases:
-        for candidate in ['localhost', '127.0.0.1', 'host.docker.internal']:
+        docker_host_candidates = [
+            'localhost',
+            '127.0.0.1',
+            'host.docker.internal',
+            'host.containers.internal',
+            '172.17.0.1',
+            '172.18.0.1'
+        ]
+        for candidate in docker_host_candidates:
             if candidate not in host_candidates:
                 host_candidates.append(candidate)
 
