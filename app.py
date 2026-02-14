@@ -2115,6 +2115,32 @@ def normalize_tally_host(host):
     host = host.split('/')[0]
     return host
 
+def get_default_gateway_ips():
+    """Best-effort detection of local gateway IPs (useful for containerized deployments)."""
+    gateways = []
+
+    try:
+        with open('/proc/net/route', 'r', encoding='utf-8') as route_file:
+            next(route_file, None)  # Skip header
+            for line in route_file:
+                fields = line.strip().split()
+                if len(fields) < 3:
+                    continue
+
+                destination_hex, gateway_hex = fields[1], fields[2]
+                if destination_hex != '00000000' or gateway_hex == '00000000':
+                    continue
+
+                # /proc/net/route stores bytes in little-endian order
+                gateway_bytes = [gateway_hex[i:i+2] for i in range(0, len(gateway_hex), 2)]
+                gateway_ip = '.'.join(str(int(byte, 16)) for byte in reversed(gateway_bytes))
+                if gateway_ip and gateway_ip not in gateways:
+                    gateways.append(gateway_ip)
+    except (OSError, ValueError, StopIteration):
+        pass
+
+    return gateways
+
 def get_tally_host_candidates(host):
     """Return fallback hosts when localhost-style addresses are used."""
     normalized_host = normalize_tally_host(host)
@@ -2130,6 +2156,13 @@ def get_tally_host_candidates(host):
             '172.17.0.1',
             '172.18.0.1'
         ]
+
+        docker_host_candidates.extend(get_default_gateway_ips())
+
+        env_host = normalize_tally_host(os.getenv('TALLY_HOST', ''))
+        if env_host:
+            docker_host_candidates.append(env_host)
+
         for candidate in docker_host_candidates:
             if candidate not in host_candidates:
                 host_candidates.append(candidate)
