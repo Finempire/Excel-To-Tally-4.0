@@ -2393,9 +2393,44 @@ def fetch_companies_from_tally(host, port):
     Fetches list of company names from Tally server.
     Returns tuple (success: bool, message: str, companies: list)
     """
+    def extract_company_names_from_xml(xml_text):
+        """Extract company names from a Tally XML payload using multiple patterns."""
+        companies = []
+
+        try:
+            cleaned_response = sanitize_tally_response(xml_text)
+            root = ET.fromstring(cleaned_response)
+        except ET.ParseError:
+            return []
+
+        # Common tag used in many Tally responses
+        for company_elem in root.findall('.//COMPANYNAME'):
+            if company_elem.text and company_elem.text.strip():
+                companies.append(company_elem.text.strip())
+
+        # Some responses return COMPANY/NAME pairs
+        for company_elem in root.findall('.//COMPANY'):
+            name_elem = company_elem.find('.//NAME')
+            if name_elem is not None and name_elem.text and name_elem.text.strip():
+                companies.append(name_elem.text.strip())
+
+        # Some responses return CMPINFO/NAME blocks
+        for cmpinfo_elem in root.findall('.//CMPINFO'):
+            name_elem = cmpinfo_elem.find('.//NAME')
+            if name_elem is not None and name_elem.text and name_elem.text.strip():
+                companies.append(name_elem.text.strip())
+
+        # Fallback: parse list containers with direct NAME children
+        for list_elem in root.findall('.//COMPANYNAME.LIST'):
+            for name_elem in list_elem.findall('.//NAME'):
+                if name_elem.text and name_elem.text.strip():
+                    companies.append(name_elem.text.strip())
+
+        return [name for name in companies if name]
+
     try:
-        # Construct Tally XML request to get all companies
-        tally_request = '''
+        # Request variant 1: explicit report-based company listing
+        report_request = '''
         <ENVELOPE>
             <HEADER>
                 <VERSION>1</VERSION>
@@ -2440,42 +2475,77 @@ def fetch_companies_from_tally(host, port):
         </ENVELOPE>
         '''
 
-        # Send request to Tally
-        response, _, _ = post_to_tally_with_fallback(host, port, tally_request, timeout=10)
+        # Request variant 2: collection-based listing (works on some Tally setups)
+        collection_request = '''
+        <ENVELOPE>
+            <HEADER>
+                <VERSION>1</VERSION>
+                <TALLYREQUEST>Export</TALLYREQUEST>
+                <TYPE>Collection</TYPE>
+                <ID>List of Companies</ID>
+            </HEADER>
+            <BODY>
+                <DESC>
+                    <STATICVARIABLES>
+                        <SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>
+                    </STATICVARIABLES>
+                    <TDL>
+                        <TDLMESSAGE>
+                            <COLLECTION NAME="List of Companies">
+                                <TYPE>Company</TYPE>
+                                <FETCH>Name</FETCH>
+                            </COLLECTION>
+                        </TDLMESSAGE>
+                    </TDL>
+                </DESC>
+            </BODY>
+        </ENVELOPE>
+        '''
 
-        if response.status_code != 200:
-            return False, f"Tally server returned error: {response.status_code}", []
+        # Request variant 3: company object collection fallback
+        company_request = '''
+        <ENVELOPE>
+            <HEADER>
+                <VERSION>1</VERSION>
+                <TALLYREQUEST>Export</TALLYREQUEST>
+                <TYPE>Collection</TYPE>
+                <ID>Company Collection</ID>
+            </HEADER>
+            <BODY>
+                <DESC>
+                    <STATICVARIABLES>
+                        <SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>
+                    </STATICVARIABLES>
+                    <TDL>
+                        <TDLMESSAGE>
+                            <COLLECTION NAME="Company Collection">
+                                <TYPE>Company</TYPE>
+                                <FETCH>Name</FETCH>
+                            </COLLECTION>
+                        </TDLMESSAGE>
+                    </TDL>
+                </DESC>
+            </BODY>
+        </ENVELOPE>
+        '''
 
-        # Parse XML response to extract company names
-        try:
-            cleaned_response = sanitize_tally_response(response.text)
-            root = ET.fromstring(cleaned_response)
-        except ET.ParseError as e:
-            return False, f"Failed to parse Tally response: {str(e)}", []
-
-        # Extract company names from response
+        requests_to_try = [report_request, collection_request, company_request]
         companies = []
 
-        # Try multiple possible XML paths for company names
-        for company_elem in root.findall('.//COMPANYNAME'):
-            if company_elem.text:
-                companies.append(company_elem.text.strip())
+        for tally_request in requests_to_try:
+            response, _, _ = post_to_tally_with_fallback(host, port, tally_request, timeout=10)
 
-        # Alternative path - check for NAME elements under COMPANY
-        if not companies:
-            for company_elem in root.findall('.//COMPANY'):
-                name_elem = company_elem.find('.//NAME')
-                if name_elem is not None and name_elem.text:
-                    companies.append(name_elem.text.strip())
+            if response.status_code != 200:
+                continue
 
-        # Another alternative - direct NAME elements
-        if not companies:
-            for name_elem in root.findall('.//NAME'):
-                if name_elem.text and name_elem.text.strip():
-                    companies.append(name_elem.text.strip())
+            companies.extend(extract_company_names_from_xml(response.text))
 
         # Remove duplicates while preserving order
         companies = list(dict.fromkeys(companies))
+
+        # Filter out obviously invalid entries that can appear in raw NAME fallback payloads
+        invalid_tokens = {'yes', 'no', 'true', 'false', 'listofcompanies', 'company'}
+        companies = [c for c in companies if c.strip().lower() not in invalid_tokens]
 
         if not companies:
             return False, "No companies found on Tally server. Please ensure Tally is running and companies are loaded.", []
