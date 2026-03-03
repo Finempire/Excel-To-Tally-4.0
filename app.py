@@ -2173,7 +2173,7 @@ def post_to_tally_with_fallback(host, port, data, timeout):
     """POST to Tally, trying sensible localhost fallbacks when needed."""
     headers = {'Content-Type': 'text/xml'}
     host_candidates = get_tally_host_candidates(host)
-    last_error = None
+    errors_by_host = []
 
     for candidate in host_candidates:
         try:
@@ -2181,27 +2181,41 @@ def post_to_tally_with_fallback(host, port, data, timeout):
             response = requests.post(url, data=data, headers=headers, timeout=timeout)
             return response, candidate, host_candidates
         except requests.exceptions.ConnectionError as err:
-            last_error = err
+            errors_by_host.append((candidate, str(err)))
             continue
 
-    if last_error:
-        raise last_error
+    if errors_by_host:
+        error_summary = '; '.join(f"{attempted_host}: {error}" for attempted_host, error in errors_by_host)
+        raise requests.exceptions.ConnectionError(
+            f"Unable to connect to Tally on any host candidate ({', '.join(host_candidates)}). "
+            f"Details: {error_summary}"
+        )
 
     raise requests.exceptions.ConnectionError(f"Unable to resolve a valid Tally host from '{host}'")
 
-def get_tally_connection_error_message(host, port, host_candidates):
+def get_tally_connection_error_message(host, port, host_candidates, error_detail=None):
+    guidance = (
+        "Please ensure Tally is running with web server enabled, listening on a reachable interface "
+        "(0.0.0.0 or the server IP), and that firewall/NAT rules allow access to this port."
+    )
+
     if len(host_candidates) > 1:
         attempted_hosts = ', '.join(host_candidates)
-        return (
+        message = (
             f"Could not connect to Tally server at {host}:{port}. "
             f"Tried hosts: {attempted_hosts}. "
-            "Please ensure Tally is running with web server enabled and use a reachable server IP/hostname."
+            f"{guidance}"
+        )
+    else:
+        message = (
+            f"Could not connect to Tally server at {host}:{port}. "
+            f"{guidance}"
         )
 
-    return (
-        f"Could not connect to Tally server at {host}:{port}. "
-        "Please ensure Tally is running with web server enabled and use a reachable server IP/hostname."
-    )
+    if error_detail:
+        message += f" Error detail: {error_detail}"
+
+    return message
 
 def sync_ledgers_from_tally(host, port, company_name, email):
     """
@@ -2298,8 +2312,8 @@ def sync_ledgers_from_tally(host, port, company_name, email):
 
         return True, f"Successfully synced {len(ledgers)} ledgers from Tally", len(ledgers)
 
-    except requests.exceptions.ConnectionError:
-        return False, get_tally_connection_error_message(host, port, get_tally_host_candidates(host)), 0
+    except requests.exceptions.ConnectionError as err:
+        return False, get_tally_connection_error_message(host, port, get_tally_host_candidates(host), str(err)), 0
     except requests.exceptions.Timeout:
         return False, "Connection to Tally server timed out. Please try again.", 0
     except Exception as e:
@@ -2381,8 +2395,8 @@ def push_vouchers_to_tally(xml_data, host, port):
             # If we can't parse the response, show it to user for debugging
             return False, f"Could not parse Tally response. Raw response:\n{response.text[:500]}\n\nParse error: {str(parse_err)}", 0
 
-    except requests.exceptions.ConnectionError:
-        return False, get_tally_connection_error_message(host, port, get_tally_host_candidates(host)), 0
+    except requests.exceptions.ConnectionError as err:
+        return False, get_tally_connection_error_message(host, port, get_tally_host_candidates(host), str(err)), 0
     except requests.exceptions.Timeout:
         return False, "Connection to Tally server timed out. Please try again.", 0
     except Exception as e:
@@ -2552,8 +2566,8 @@ def fetch_companies_from_tally(host, port):
 
         return True, f"Successfully detected {len(companies)} company(ies) from Tally", companies
 
-    except requests.exceptions.ConnectionError:
-        return False, get_tally_connection_error_message(host, port, get_tally_host_candidates(host)), []
+    except requests.exceptions.ConnectionError as err:
+        return False, get_tally_connection_error_message(host, port, get_tally_host_candidates(host), str(err)), []
     except requests.exceptions.Timeout:
         return False, "Connection to Tally server timed out. Please try again.", []
     except Exception as e:
