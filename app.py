@@ -2198,18 +2198,31 @@ def get_tally_connection_error_message(host, port, host_candidates, error_detail
         "Please ensure Tally is running with web server enabled, listening on a reachable interface "
         "(0.0.0.0 or the server IP), and that firewall/NAT rules allow access to this port."
     )
+    extra_guidance = ""
+
+    normalized_error = (error_detail or "").lower()
+    if "timed out" in normalized_error:
+        extra_guidance = (
+            " The connection attempt timed out, which usually means the port is blocked or unreachable. "
+            f"From this machine, verify routing and port access with `curl -v --connect-timeout 5 http://{host}:{port}/`."
+        )
+    elif "connection refused" in normalized_error:
+        extra_guidance = (
+            " The server actively refused the connection, which usually means no service is listening on this port. "
+            f"Please confirm Tally's web server is enabled and bound to {host}:{port}."
+        )
 
     if len(host_candidates) > 1:
         attempted_hosts = ', '.join(host_candidates)
         message = (
             f"Could not connect to Tally server at {host}:{port}. "
             f"Tried hosts: {attempted_hosts}. "
-            f"{guidance}"
+            f"{guidance}{extra_guidance}"
         )
     else:
         message = (
             f"Could not connect to Tally server at {host}:{port}. "
-            f"{guidance}"
+            f"{guidance}{extra_guidance}"
         )
 
     if error_detail:
