@@ -2265,7 +2265,7 @@ def sync_ledgers_from_tally(host, port, company_name, email):
         '''
 
         # Send request to Tally
-        response, _, _ = post_to_tally_with_fallback(host, port, tally_request, timeout=10)
+        response, _, _ = post_to_tally_with_fallback(host, port, tally_request, timeout=30)
 
         if response.status_code != 200:
             return False, f"Tally server returned error: {response.status_code}", 0
@@ -2560,7 +2560,7 @@ def fetch_companies_from_tally(host, port):
         companies = []
 
         for tally_request in requests_to_try:
-            response, _, _ = post_to_tally_with_fallback(host, port, tally_request, timeout=10)
+            response, _, _ = post_to_tally_with_fallback(host, port, tally_request, timeout=30)
 
             if response.status_code != 200:
                 continue
