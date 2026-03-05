@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 import socket
+import io
 
 import requests
 import pytest
@@ -50,7 +51,7 @@ def test_post_to_tally_with_fallback_uses_short_connect_timeout(monkeypatch):
         captured_timeouts.append(timeout)
         raise requests.exceptions.ConnectionError("simulated connection error")
 
-    monkeypatch.setattr(app, "get_tally_host_candidates", lambda host: ["127.0.0.1"])
+    monkeypatch.setattr(app, "get_tally_host_candidates", lambda host: ["127.0.0.1", "172.17.0.1"])
     monkeypatch.setattr(app.socket, "getaddrinfo", fake_getaddrinfo)
     monkeypatch.setattr(app.requests, "post", fake_post)
 
@@ -59,7 +60,19 @@ def test_post_to_tally_with_fallback_uses_short_connect_timeout(monkeypatch):
     except requests.exceptions.ConnectionError:
         pass
 
-    assert captured_timeouts == [(5.0, 30.0)]
+    assert captured_timeouts == [(5.0, 30.0), (1.5, 30.0)]
+
+
+def test_get_default_gateway_ips_filters_link_local_and_loopback(monkeypatch):
+    route_data = """Iface\tDestination Gateway Flags RefCnt Use Metric Mask MTU Window IRTT
+eth0\t00000000\t0101FEA9\t0003\t0\t0\t0\t00000000\t0\t0\t0
+eth0\t00000000\t0100007F\t0003\t0\t0\t0\t00000000\t0\t0\t0
+eth0\t00000000\t010011AC\t0003\t0\t0\t0\t00000000\t0\t0\t0
+"""
+
+    monkeypatch.setattr("builtins.open", lambda *args, **kwargs: io.StringIO(route_data))
+
+    assert app.get_default_gateway_ips() == ["172.17.0.1"]
 
 
 def test_post_to_tally_with_fallback_skips_unresolvable_hosts(monkeypatch):
