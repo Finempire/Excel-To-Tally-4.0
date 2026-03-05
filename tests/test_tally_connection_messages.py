@@ -41,6 +41,21 @@ def test_connection_error_message_includes_refused_guidance():
     assert "actively refused the connection" in message
 
 
+def test_connection_error_message_includes_localhost_container_guidance():
+    message = app.get_tally_connection_error_message(
+        host="localhost",
+        port=9000,
+        host_candidates=["localhost", "127.0.0.1", "172.17.0.1"],
+        error_detail=(
+            "localhost: Failed to establish a new connection: [Errno 111] Connection refused; "
+            "172.17.0.1: Connection to 172.17.0.1 timed out"
+        ),
+    )
+
+    assert "cannot reach your desktop localhost" in message
+    assert "instead of localhost" in message
+
+
 def test_post_to_tally_with_fallback_uses_short_connect_timeout(monkeypatch):
     captured_timeouts = []
 
