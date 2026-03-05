@@ -2231,7 +2231,22 @@ def get_tally_connection_error_message(host, port, host_candidates, error_detail
     extra_guidance = ""
 
     normalized_error = (error_detail or "").lower()
-    if "timed out" in normalized_error:
+    normalized_host = normalize_tally_host(host).lower()
+    localhost_aliases = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
+
+    if (
+        normalized_host in localhost_aliases
+        and len(host_candidates) > 1
+        and "connection refused" in normalized_error
+        and "timed out" in normalized_error
+    ):
+        extra_guidance = (
+            " This usually means the app cannot reach your desktop localhost from its runtime environment "
+            "(for example, Docker/container or another machine). "
+            "Set Tally host to the machine LAN IP (for example `192.168.x.x`) instead of localhost, "
+            "and allow inbound access to port 9000."
+        )
+    elif "timed out" in normalized_error:
         extra_guidance = (
             " The connection attempt timed out, which usually means the port is blocked or unreachable. "
             f"From this machine, verify routing and port access with `curl -v --connect-timeout 5 http://{host}:{port}/`."
