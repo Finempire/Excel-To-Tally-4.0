@@ -11,6 +11,7 @@ from sqlalchemy.sql import text
 import requests
 import xml.etree.ElementTree as ET
 import socket
+import ipaddress
 
 # --- ENHANCED AI IMPORTS ---
 import re
@@ -2135,6 +2136,14 @@ def get_default_gateway_ips():
                 # /proc/net/route stores bytes in little-endian order
                 gateway_bytes = [gateway_hex[i:i+2] for i in range(0, len(gateway_hex), 2)]
                 gateway_ip = '.'.join(str(int(byte, 16)) for byte in reversed(gateway_bytes))
+                try:
+                    parsed_ip = ipaddress.ip_address(gateway_ip)
+                    # Skip loopback/link-local routes that are rarely useful for host fallback
+                    if parsed_ip.is_loopback or parsed_ip.is_link_local:
+                        continue
+                except ValueError:
+                    continue
+
                 if gateway_ip and gateway_ip not in gateways:
                     gateways.append(gateway_ip)
     except (OSError, ValueError, StopIteration):
@@ -2185,9 +2194,9 @@ def post_to_tally_with_fallback(host, port, data, timeout):
         read_timeout = float(timeout)
         connect_timeout = min(read_timeout, 5.0)
 
-    request_timeout = (connect_timeout, read_timeout)
+    fallback_connect_timeout = min(connect_timeout, 1.5)
 
-    for candidate in host_candidates:
+    for index, candidate in enumerate(host_candidates):
         try:
             # Skip hosts that cannot be resolved in this environment to avoid avoidable waits.
             try:
@@ -2197,6 +2206,8 @@ def post_to_tally_with_fallback(host, port, data, timeout):
                 continue
 
             url = f"http://{candidate}:{port}"
+            candidate_connect_timeout = connect_timeout if index == 0 else fallback_connect_timeout
+            request_timeout = (candidate_connect_timeout, read_timeout)
             response = requests.post(url, data=data, headers=headers, timeout=request_timeout)
             return response, candidate, host_candidates
         except requests.exceptions.ConnectionError as err:
