@@ -10,6 +10,7 @@ import difflib
 from sqlalchemy.sql import text
 import requests
 import xml.etree.ElementTree as ET
+import socket
 
 # --- ENHANCED AI IMPORTS ---
 import re
@@ -2175,10 +2176,28 @@ def post_to_tally_with_fallback(host, port, data, timeout):
     host_candidates = get_tally_host_candidates(host)
     errors_by_host = []
 
+    # Keep overall request timeout behavior, but use a shorter connect timeout per host
+    # so fallback host checks do not take several minutes when targets are unreachable.
+    if isinstance(timeout, (tuple, list)):
+        connect_timeout = float(timeout[0]) if len(timeout) > 0 else 5.0
+        read_timeout = float(timeout[1]) if len(timeout) > 1 else connect_timeout
+    else:
+        read_timeout = float(timeout)
+        connect_timeout = min(read_timeout, 5.0)
+
+    request_timeout = (connect_timeout, read_timeout)
+
     for candidate in host_candidates:
         try:
+            # Skip hosts that cannot be resolved in this environment to avoid avoidable waits.
+            try:
+                socket.getaddrinfo(candidate, port)
+            except socket.gaierror as err:
+                errors_by_host.append((candidate, f"Name resolution failed: {err}"))
+                continue
+
             url = f"http://{candidate}:{port}"
-            response = requests.post(url, data=data, headers=headers, timeout=timeout)
+            response = requests.post(url, data=data, headers=headers, timeout=request_timeout)
             return response, candidate, host_candidates
         except requests.exceptions.ConnectionError as err:
             errors_by_host.append((candidate, str(err)))
