@@ -2190,30 +2190,13 @@ def get_lan_ip_suggestions():
 
 
 def get_tally_host_candidates(host):
-    """Return fallback hosts when localhost-style addresses are used."""
+    """Return the base host and optionally the TALLY_HOST env var."""
     normalized_host = normalize_tally_host(host)
     host_candidates = [normalized_host]
 
-    local_aliases = {'localhost', '127.0.0.1', '0.0.0.0', '::1'}
-    if normalized_host in local_aliases:
-        docker_host_candidates = [
-            'localhost',
-            '127.0.0.1',
-            'host.docker.internal',
-            'host.containers.internal',
-            '172.17.0.1',
-            '172.18.0.1'
-        ]
-
-        docker_host_candidates.extend(get_default_gateway_ips())
-
-        env_host = normalize_tally_host(os.getenv('TALLY_HOST', ''))
-        if env_host:
-            docker_host_candidates.append(env_host)
-
-        for candidate in docker_host_candidates:
-            if candidate not in host_candidates:
-                host_candidates.append(candidate)
+    env_host = normalize_tally_host(os.getenv('TALLY_HOST', ''))
+    if env_host and env_host not in host_candidates:
+        host_candidates.append(env_host)
 
     return [candidate for candidate in host_candidates if candidate]
 
@@ -2272,17 +2255,11 @@ def get_tally_connection_error_message(host, port, host_candidates, error_detail
     normalized_host = normalize_tally_host(host).lower()
     localhost_aliases = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
 
-    if (
-        normalized_host in localhost_aliases
-        and len(host_candidates) > 1
-        and "connection refused" in normalized_error
-        and "timed out" in normalized_error
-    ):
+    if normalized_host in localhost_aliases:
         extra_guidance = (
-            " This usually means the app cannot reach your desktop localhost from its runtime environment "
-            "(for example, Docker/container or another machine). "
-            "Set Tally host to the machine LAN IP (for example `192.168.x.x`) instead of localhost, "
-            "and allow inbound access to port 9000."
+            " *Note*: If you are running this app on Streamlit Community Cloud (or another cloud platform), "
+            "it cannot reach `localhost` on your personal local desktop. You need to use a tunneling service "
+            "(like ngrok or localtunnel) to expose your local Tally server to the internet, and then use that public URL here."
         )
     elif "timed out" in normalized_error:
         extra_guidance = (

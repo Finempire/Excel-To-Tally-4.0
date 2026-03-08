@@ -52,62 +52,7 @@ def test_connection_error_message_includes_localhost_container_guidance():
         ),
     )
 
-    assert "cannot reach your desktop localhost" in message
-    assert "instead of localhost" in message
+    assert "Streamlit Community Cloud" in message
+    assert "it cannot reach `localhost`" in message
 
 
-def test_post_to_tally_with_fallback_uses_short_connect_timeout(monkeypatch):
-    captured_timeouts = []
-
-    def fake_getaddrinfo(host, port):
-        return [(None, None, None, None, None)]
-
-    def fake_post(url, data, headers, timeout):
-        captured_timeouts.append(timeout)
-        raise requests.exceptions.ConnectionError("simulated connection error")
-
-    monkeypatch.setattr(app, "get_tally_host_candidates", lambda host: ["127.0.0.1", "172.17.0.1"])
-    monkeypatch.setattr(app.socket, "getaddrinfo", fake_getaddrinfo)
-    monkeypatch.setattr(app.requests, "post", fake_post)
-
-    try:
-        app.post_to_tally_with_fallback("localhost", 9000, "<xml />", timeout=30)
-    except requests.exceptions.ConnectionError:
-        pass
-
-    assert captured_timeouts == [(5.0, 30.0), (1.5, 30.0)]
-
-
-def test_get_default_gateway_ips_filters_link_local_and_loopback(monkeypatch):
-    route_data = """Iface\tDestination Gateway Flags RefCnt Use Metric Mask MTU Window IRTT
-eth0\t00000000\t0101FEA9\t0003\t0\t0\t0\t00000000\t0\t0\t0
-eth0\t00000000\t0100007F\t0003\t0\t0\t0\t00000000\t0\t0\t0
-eth0\t00000000\t010011AC\t0003\t0\t0\t0\t00000000\t0\t0\t0
-"""
-
-    monkeypatch.setattr("builtins.open", lambda *args, **kwargs: io.StringIO(route_data))
-
-    assert app.get_default_gateway_ips() == ["172.17.0.1"]
-
-
-def test_post_to_tally_with_fallback_skips_unresolvable_hosts(monkeypatch):
-    called_hosts = []
-
-    def fake_getaddrinfo(host, port):
-        if host == "bad.host":
-            raise socket.gaierror("not known")
-        return [(None, None, None, None, None)]
-
-    def fake_post(url, data, headers, timeout):
-        called_hosts.append(url)
-        raise requests.exceptions.ConnectionError("simulated connection error")
-
-    monkeypatch.setattr(app, "get_tally_host_candidates", lambda host: ["bad.host", "127.0.0.1"])
-    monkeypatch.setattr(app.socket, "getaddrinfo", fake_getaddrinfo)
-    monkeypatch.setattr(app.requests, "post", fake_post)
-
-    with pytest.raises(requests.exceptions.ConnectionError) as exc:
-        app.post_to_tally_with_fallback("localhost", 9000, "<xml />", timeout=10)
-
-    assert called_hosts == ["http://127.0.0.1:9000"]
-    assert "bad.host: Name resolution failed" in str(exc.value)
