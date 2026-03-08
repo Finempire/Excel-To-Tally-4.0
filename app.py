@@ -932,6 +932,13 @@ def init_db(seed_admin=None, admin_password=None):
             );
         '''))
 
+        # Indexes to speed up the most common per-user queries
+        s.execute(text('CREATE INDEX IF NOT EXISTS idx_bank_ledger_master_email ON bank_ledger_master (email)'))
+        s.execute(text('CREATE INDEX IF NOT EXISTS idx_bank_rules_email ON bank_rules (email)'))
+        s.execute(text('CREATE INDEX IF NOT EXISTS idx_user_learned_mappings_email ON user_learned_mappings (email)'))
+        s.execute(text('CREATE INDEX IF NOT EXISTS idx_tally_synced_ledgers_email ON tally_synced_ledgers (email)'))
+        s.execute(text('CREATE INDEX IF NOT EXISTS idx_journal_templates_email ON journal_templates (email)'))
+
         # Add/Update Admin User
         try:
             admin_pass_hash = hash_password("admin@2003")
@@ -1154,14 +1161,15 @@ def load_user_settings(email):
             st.session_state.enable_direct_push_journal = False
             st.session_state.sync_ledgers_on_load = False
 
-        # Auto-sync ledgers if enabled
+        # Auto-sync ledgers if enabled — use a short timeout so login is never blocked
         if st.session_state.sync_ledgers_on_load and st.session_state.tally_company_name:
             try:
                 success, message, count = sync_ledgers_from_tally(
                     st.session_state.tally_server_host,
                     st.session_state.tally_server_port,
                     st.session_state.tally_company_name,
-                    email
+                    email,
+                    timeout=(3, 10),  # short connect timeout so login is never blocked
                 )
                 if success:
                     # Load synced ledgers into ledger master
@@ -1169,7 +1177,7 @@ def load_user_settings(email):
                     if synced_ledgers:
                         st.session_state.ledger_master = [row[0] for row in synced_ledgers]
             except Exception as e:
-                print(f"Auto-sync failed: {e}")
+                print(f"Auto-sync failed (will retry on next manual sync): {e}")
 
     st.session_state.settings_loaded = True
 
@@ -2151,6 +2159,36 @@ def get_default_gateway_ips():
 
     return gateways
 
+def get_lan_ip_suggestions():
+    """Return LAN IP addresses that Tally can realistically be accessed on.
+
+    Tries socket-based detection first (works on most platforms), then falls back
+    to reading /proc/net/route (Linux/container environments).  Returns a de-duped
+    list of candidate IPs, excluding loopback/link-local addresses.
+    """
+    suggestions = []
+
+    # Socket-based detection: open a UDP socket to a public IP to learn the
+    # outbound interface address (no actual packet is sent).
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            lan_ip = s.getsockname()[0]
+            if lan_ip and lan_ip != "0.0.0.0":
+                parsed = ipaddress.ip_address(lan_ip)
+                if not parsed.is_loopback and not parsed.is_link_local:
+                    suggestions.append(lan_ip)
+    except Exception:
+        pass
+
+    # Also include gateway IPs discovered from routing table
+    for gw in get_default_gateway_ips():
+        if gw not in suggestions:
+            suggestions.append(gw)
+
+    return suggestions
+
+
 def get_tally_host_candidates(host):
     """Return fallback hosts when localhost-style addresses are used."""
     normalized_host = normalize_tally_host(host)
@@ -2275,7 +2313,7 @@ def get_tally_connection_error_message(host, port, host_candidates, error_detail
 
     return message
 
-def sync_ledgers_from_tally(host, port, company_name, email):
+def sync_ledgers_from_tally(host, port, company_name, email, timeout=30):
     """
     Fetches ledger list from Tally and stores in database.
     Returns tuple (success: bool, message: str, ledger_count: int)
@@ -2310,7 +2348,7 @@ def sync_ledgers_from_tally(host, port, company_name, email):
         '''
 
         # Send request to Tally
-        response, _, _ = post_to_tally_with_fallback(host, port, tally_request, timeout=30)
+        response, _, _ = post_to_tally_with_fallback(host, port, tally_request, timeout=timeout)
 
         if response.status_code != 200:
             return False, f"Tally server returned error: {response.status_code}", 0
@@ -2345,16 +2383,15 @@ def sync_ledgers_from_tally(host, port, company_name, email):
             s.execute(text('DELETE FROM tally_synced_ledgers WHERE email = :email'),
                      params={'email': email})
 
-            # Insert new ledgers
-            for ledger_name, ledger_group in ledgers:
-                s.execute(text('''
-                    INSERT OR REPLACE INTO tally_synced_ledgers (email, ledger_name, ledger_group)
-                    VALUES (:email, :ledger_name, :ledger_group)
-                '''), params={
-                    'email': email,
-                    'ledger_name': ledger_name,
-                    'ledger_group': ledger_group
-                })
+            # Batch insert all ledgers in one round-trip
+            if ledgers:
+                s.execute(
+                    text('''
+                        INSERT OR REPLACE INTO tally_synced_ledgers (email, ledger_name, ledger_group)
+                        VALUES (:email, :ledger_name, :ledger_group)
+                    '''),
+                    [{'email': email, 'ledger_name': ln, 'ledger_group': lg} for ln, lg in ledgers],
+                )
 
             # Update last sync date
             s.execute(text('''
@@ -2460,7 +2497,7 @@ def push_vouchers_to_tally(xml_data, host, port):
     except Exception as e:
         return False, f"Error pushing vouchers to Tally: {str(e)}", 0
 
-def fetch_companies_from_tally(host, port):
+def fetch_companies_from_tally(host, port, timeout=10):
     """
     Fetches list of company names from Tally server.
     Returns tuple (success: bool, message: str, companies: list)
@@ -2605,7 +2642,7 @@ def fetch_companies_from_tally(host, port):
         companies = []
 
         for tally_request in requests_to_try:
-            response, _, _ = post_to_tally_with_fallback(host, port, tally_request, timeout=30)
+            response, _, _ = post_to_tally_with_fallback(host, port, tally_request, timeout=timeout)
 
             if response.status_code != 200:
                 continue
@@ -4324,14 +4361,22 @@ def render_settings_page():
         if (not st.session_state.auto_detected_companies and
             st.session_state.tally_server_host and
             st.session_state.tally_server_port):
+            # Use a short timeout (3 s connect / 5 s read) so opening the tab
+            # never hangs when Tally is offline.  Errors are silently swallowed
+            # here; the user can retry explicitly with "Test Connection".
             with st.spinner("Detecting companies from Tally server..."):
-                success, message, companies = fetch_companies_from_tally(
-                    st.session_state.tally_server_host,
-                    st.session_state.tally_server_port
-                )
+                try:
+                    success, message, companies = fetch_companies_from_tally(
+                        st.session_state.tally_server_host,
+                        st.session_state.tally_server_port,
+                        timeout=(3, 5),
+                    )
+                except Exception:
+                    success, companies = False, []
+                # Mark as attempted regardless of outcome so we don't retry on every rerun
+                st.session_state.auto_detected_companies = True
                 if success and companies:
                     st.session_state.detected_companies = companies
-                    st.session_state.auto_detected_companies = True
 
         st.markdown("#### Tally Server Connection")
         col1, col2 = st.columns(2)
@@ -4340,7 +4385,12 @@ def render_settings_page():
                 "Tally Server Host:",
                 value=st.session_state.tally_server_host,
                 key="tally_host_input",
-                help="Enter the IP address or hostname of your Tally server (default: localhost)"
+                help=(
+                    "IP address or hostname of the machine running Tally. "
+                    "Use 'localhost' when Tally runs on the same machine. "
+                    "If this app runs inside Docker/a cloud container, use your machine's LAN IP "
+                    "(e.g. 192.168.x.x) so the container can reach your desktop."
+                )
             )
         with col2:
             st.number_input(
@@ -4349,8 +4399,30 @@ def render_settings_page():
                 key="tally_port_input",
                 min_value=1,
                 max_value=65535,
-                help="Enter the port number for Tally ODBC connection (default: 9000)"
+                help="Port number configured in Tally's web server settings (default: 9000)"
             )
+
+        # Show LAN IP hint when localhost is configured — most common source of
+        # "connection refused" errors in container/cloud deployments.
+        _configured_host = normalize_tally_host(st.session_state.tally_server_host)
+        if _configured_host in {"localhost", "127.0.0.1", "0.0.0.0", "::1"}:
+            _lan_ips = get_lan_ip_suggestions()
+            if _lan_ips:
+                _ip_list = ", ".join(f"`{ip}`" for ip in _lan_ips)
+                st.info(
+                    f"**Tip:** You are using `{_configured_host}` as the Tally host. "
+                    f"If the app cannot reach Tally (e.g. it runs inside Docker or a remote server), "
+                    f"try setting the host to your machine's LAN IP instead: {_ip_list}. "
+                    "Also make sure Tally's web server is bound to `0.0.0.0` (not just `127.0.0.1`) "
+                    "and that port 9000 is allowed through your firewall."
+                )
+            else:
+                st.info(
+                    f"**Tip:** You are using `{_configured_host}`. "
+                    "If this app runs in Docker/cloud and cannot reach Tally, set the host to your "
+                    "machine's LAN IP (e.g. `192.168.x.x`) and ensure Tally's web server listens on "
+                    "`0.0.0.0` with port 9000 open in your firewall."
+                )
 
         # Company selection - use dropdown if companies are detected, otherwise show text input
         if st.session_state.detected_companies:
