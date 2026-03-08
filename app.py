@@ -1978,6 +1978,163 @@ def get_bank_template_csv():
     example_data += "05-04-2024,Amazon Office Supplies,15000,0\n"
     return headers + example_data
 
+def get_purchase_with_item_template_csv():
+    """Generates the CSV template for Purchase (With Item)."""
+    headers = "SUPPLIER INV NO,INVOICE DATE,GST NO,PARTY A/C NAME,PLACE OF SUPPLY,PURCHASE LEDGER,NAME OF ITEM,QUANTITY,RATE,AMOUNT,SGST,CGST,IGST,TOTAL AMOUNT\n"
+    example_data = "INV-001,01-04-2024,27ABCDE1234F1Z5,Supplier A,Maharashtra,Purchase A/c,Widget A,10,100,1000,90,90,0,1180\n"
+    return headers + example_data
+
+def get_purchase_without_item_template_csv():
+    """Generates the CSV template for Purchase (Without Item)."""
+    headers = "SUPPLIER INV NO,INVOICE DATE,GST NO,PARTY A/C NAME,PLACE OF SUPPLY,PARTICULARS,AMOUNT,SGST,CGST,IGST,TOTAL AMOUNT\n"
+    example_data = "INV-002,02-04-2024,27ABCDE1234F1Z5,Supplier B,Maharashtra,Consulting Fees,5000,450,450,0,5900\n"
+    return headers + example_data
+
+def create_purchase_tally_xml(df, purchase_type, company_name, party_mappings=None, particulars_mappings=None, tax_mappings=None):
+    """Generates Tally XML from Purchase data (with or without items)."""
+    party_mappings = party_mappings or {}
+    particulars_mappings = particulars_mappings or {}
+    tax_mappings = tax_mappings or {}
+
+    xml_template = """<ENVELOPE>
+ <HEADER>
+  <TALLYREQUEST>Import Data</TALLYREQUEST>
+ </HEADER>
+ <BODY>
+  <IMPORTDATA>
+   <REQUESTDESC>
+    <REPORTNAME>Vouchers</REPORTNAME>
+    <STATICVARIABLES>
+     <SVCURRENTCOMPANY>{company_name}</SVCURRENTCOMPANY>
+    </STATICVARIABLES>
+   </REQUESTDESC>
+   <REQUESTDATA>
+{tally_messages}
+   </REQUESTDATA>
+  </IMPORTDATA>
+ </BODY>
+</ENVELOPE>"""
+
+    voucher_template = """
+    <TALLYMESSAGE xmlns:UDF="TallyUDF">
+     <VOUCHER VCHTYPE="Purchase" ACTION="Create">
+      <DATE>{date}</DATE>
+      <VOUCHERTYPENAME>Purchase</VOUCHERTYPENAME>
+      <PARTYLEDGERNAME>{party_ledger}</PARTYLEDGERNAME>
+      <VOUCHERNUMBER>{supplier_inv_no}</VOUCHERNUMBER>
+      {ledger_entries}
+      {inventory_entries}
+     </VOUCHER>
+    </TALLYMESSAGE>"""
+
+    ledger_entry_template = """
+      <ALLLEDGERENTRIES.LIST>
+       <LEDGERNAME>{ledger_name}</LEDGERNAME>
+       <ISDEEMEDPOSITIVE>{is_positive}</ISDEEMEDPOSITIVE>
+       <AMOUNT>{amount}</AMOUNT>
+      </ALLLEDGERENTRIES.LIST>"""
+
+    inventory_entry_template = """
+      <ALLINVENTORYENTRIES.LIST>
+       <STOCKITEMNAME>{item_name}</STOCKITEMNAME>
+       <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
+       <BILLEDQTY>{quantity}</BILLEDQTY>
+       <RATE>{rate}</RATE>
+       <AMOUNT>{amount}</AMOUNT>
+       <ACCOUNTINGALLOCATIONS.LIST>
+        <LEDGERNAME>{purchase_ledger}</LEDGERNAME>
+        <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
+        <AMOUNT>{amount}</AMOUNT>
+       </ACCOUNTINGALLOCATIONS.LIST>
+      </ALLINVENTORYENTRIES.LIST>"""
+
+    all_tally_messages = []
+    
+    for index, row in df.iterrows():
+        try:
+            date_obj = pd.to_datetime(row['INVOICE DATE'], dayfirst=True)
+            tally_date = date_obj.strftime('%Y%m%d')
+            supplier_inv_no = escape(str(row['SUPPLIER INV NO'])) if pd.notna(row['SUPPLIER INV NO']) else ""
+            
+            # Resolve Party Ledger Name
+            raw_party = str(row['PARTY A/C NAME'])
+            party_ledger_name = party_mappings.get(raw_party, raw_party)
+            party_ledger_safe = escape(str(party_ledger_name))
+            
+            ledger_entries_list = []
+            inventory_entries_list = []
+
+            # 1. Party Ledger (Credit)
+            total_amt = round(float(row['TOTAL AMOUNT']), 2) if pd.notna(row['TOTAL AMOUNT']) else 0
+            party_entry = ledger_entry_template.format(
+                ledger_name=party_ledger_safe,
+                is_positive="No",
+                amount=total_amt
+            )
+            ledger_entries_list.append(party_entry)
+
+            # 2. Add Taxes (Debit)
+            tax_cols = ['SGST', 'CGST', 'IGST']
+            for tax in tax_cols:
+                if tax in row and pd.notna(row[tax]) and round(float(row[tax]), 2) > 0:
+                    tax_amt = round(float(row[tax]), 2)
+                    # Resolve Tax Ledger Name
+                    tax_ledger_name = tax_mappings.get(tax, tax)
+                    tax_entry = ledger_entry_template.format(
+                        ledger_name=escape(str(tax_ledger_name)),
+                        is_positive="Yes",
+                        amount=tax_amt * -1
+                    )
+                    ledger_entries_list.append(tax_entry)
+
+            # 3. Main Item / Particulars
+            item_amt = round(float(row['AMOUNT']), 2) if pd.notna(row['AMOUNT']) else 0
+            if purchase_type == "With Item":
+                item_name = escape(str(row['NAME OF ITEM']))
+                qty = str(row['QUANTITY']) if pd.notna(row['QUANTITY']) else ""
+                rate = str(row['RATE']) if pd.notna(row['RATE']) else ""
+                purchase_ledger = escape(str(row['PURCHASE LEDGER']))
+                
+                inv_entry = inventory_entry_template.format(
+                    item_name=item_name,
+                    quantity=qty,
+                    rate=rate,
+                    amount=item_amt * -1, 
+                    purchase_ledger=purchase_ledger
+                )
+                inventory_entries_list.append(inv_entry)
+            else:
+                # Resolve Particulars Ledger Name
+                raw_particular = str(row['PARTICULARS'])
+                particular_ledger_name = particulars_mappings.get(raw_particular, raw_particular)
+                particular_ledger_safe = escape(str(particular_ledger_name))
+
+                # Without Item -> Use particular as ledger (Debit)
+                part_entry = ledger_entry_template.format(
+                    ledger_name=particular_ledger_safe,
+                    is_positive="Yes",
+                    amount=item_amt * -1
+                )
+                ledger_entries_list.append(part_entry)
+
+            all_tally_messages.append(
+                voucher_template.format(
+                    date=tally_date,
+                    party_ledger=party_ledger_safe,
+                    supplier_inv_no=supplier_inv_no,
+                    ledger_entries="\n".join(ledger_entries_list),
+                    inventory_entries="\n".join(inventory_entries_list)
+                )
+            )
+        except Exception as e:
+            st.error(f"Error processing row {index}: {e}. Skipping row.")
+
+    company_name_safe = escape(str(company_name))
+    return xml_template.format(
+        company_name=company_name_safe,
+        tally_messages="\n".join(all_tally_messages)
+    )
+
 def create_bank_tally_xml(df, bank_ledger, company_name):
     """
     Generates Tally XML from a bank statement.
@@ -3194,22 +3351,28 @@ def render_dashboard_page():
     # Navigation Cards
     st.markdown("## Automation Tools")
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        if st.button("🏦 Bank Reconciliation\n\nAutomatically match bank statements with Tally ledgers", 
+        if st.button("🏦 Bank Reconciliation", 
                     use_container_width=True, help="Convert bank statements to Tally XML"):
             st.session_state.current_view = "bank_converter"
             st.rerun()
     
     with col2:
-        if st.button("Journal Automation\n\nConvert CSV/Excel journals to Tally XML format", 
+        if st.button("Journal Automation", 
                     use_container_width=True, help="Process journal entries to Tally XML"):
             st.session_state.current_view = "journal_converter"
             st.rerun()
-    
+
     with col3:
-        if st.button("Settings & Configuration\n\nManage templates, ledgers, and automation rules", 
+        if st.button("Purchase Entry", 
+                    use_container_width=True, help="Convert Purchase Excel/CSV to Tally XML"):
+            st.session_state.current_view = "purchase_converter"
+            st.rerun()
+    
+    with col4:
+        if st.button("Settings", 
                     use_container_width=True, help="Configure your automation settings"):
             st.session_state.current_view = "settings"
             st.rerun()
@@ -3228,6 +3391,10 @@ def render_dashboard_page():
             
         if st.button("Process Journal Entry", use_container_width=True):
             st.session_state.current_view = "journal_converter"
+            st.rerun()
+
+        if st.button("New Purchase Entry", use_container_width=True):
+            st.session_state.current_view = "purchase_converter"
             st.rerun()
             
         if st.button("Configure Smart Rules", use_container_width=True):
@@ -4049,6 +4216,154 @@ def render_bank_converter_page():
         except Exception as e:
             st.error(f"Error processing bank statement: {e}")
 
+def render_purchase_converter_page():
+    """UI for Purchase Converter supporting with and without items and ledger mapping."""
+    st.markdown("""
+        <div class="dashboard-header">
+            <div class="dashboard-title">Purchase Entry Automation</div>
+            <div class="dashboard-subtitle">Convert Purchase Excel/CSV to Tally XML vouchers</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Initialize session state for mappings if not present
+    if 'purchase_party_mappings' not in st.session_state:
+        st.session_state.purchase_party_mappings = {}
+    if 'purchase_particulars_mappings' not in st.session_state:
+        st.session_state.purchase_particulars_mappings = {}
+    if 'purchase_tax_mappings' not in st.session_state:
+        st.session_state.purchase_tax_mappings = {'SGST': 'SGST', 'CGST': 'CGST', 'IGST': 'IGST'}
+
+    ledger_master = st.session_state.get('ledger_master', [])
+    rules_config = st.session_state.get('bank_rules', [])
+    learned_mappings = st.session_state.get('learned_mappings', {})
+
+    col1, col2 = st.columns([2, 1])
+    with col2:
+        st.markdown("### 📥 Get Templates")
+        t_col1, t_col2 = st.columns(2)
+        with t_col1:
+            st.download_button("With Item Template", get_purchase_with_item_template_csv(), "purchase_with_item_template.csv", "text/csv", use_container_width=True)
+        with t_col2:
+            st.download_button("Without Item Template", get_purchase_without_item_template_csv(), "purchase_without_item_template.csv", "text/csv", use_container_width=True)
+
+    with col1:
+        st.markdown("### 📤 Step 1: Upload Data")
+        purchase_type = st.radio("Select Purchase Type", ["With Item", "Without Item"], horizontal=True)
+        uploaded_file = st.file_uploader(f"Upload {purchase_type} Excel or CSV file", type=['xlsx', 'csv'])
+
+    if uploaded_file:
+        df = load_uploaded_file(uploaded_file.getvalue(), uploaded_file.name)
+        if df is not None:
+            st.markdown("### 📋 Step 2: Review Data")
+            st.dataframe(df, use_container_width=True)
+
+            # Check for required columns
+            req_cols = ['SUPPLIER INV NO', 'INVOICE DATE', 'PARTY A/C NAME', 'AMOUNT', 'TOTAL AMOUNT']
+            if purchase_type == "With Item":
+                req_cols += ['PURCHASE LEDGER', 'NAME OF ITEM']
+            else:
+                req_cols += ['PARTICULARS']
+            
+            missing = [c for c in req_cols if c not in df.columns]
+            if missing:
+                st.warning(f"Missing required columns: {', '.join(missing)}")
+                return
+
+            # --- LEDGER MAPPING FOR WITHOUT ITEM ---
+            party_map_final = {}
+            particulars_map_final = {}
+            tax_map_final = st.session_state.purchase_tax_mappings
+
+            if purchase_type == "Without Item":
+                st.markdown("---")
+                st.markdown("### 🔍 Step 3: Ledger Mapping")
+                
+                m_col1, m_col2 = st.columns(2)
+                
+                with m_col1:
+                    st.markdown("#### Party Mapping")
+                    unique_parties = df['PARTY A/C NAME'].dropna().unique()
+                    
+                    if st.button("Auto-Map Parties with AI", use_container_width=True):
+                        with st.spinner("AI analyzing parties..."):
+                            s_map, _, _ = get_smart_suggestions(unique_parties, ledger_master, rules_config, "Suspense", learned_mappings)
+                            st.session_state.purchase_party_mappings.update(s_map)
+                    
+                    party_data = [{"Excel Value": p, "Tally Ledger": st.session_state.purchase_party_mappings.get(str(p), p)} for p in unique_parties]
+                    edited_party_df = st.data_editor(
+                        pd.DataFrame(party_data),
+                        column_config={"Tally Ledger": st.column_config.SelectboxColumn("Tally Ledger", options=ledger_master, width="large")},
+                        hide_index=True,
+                        use_container_width=True,
+                        key="party_editor"
+                    )
+                    party_map_final = dict(zip(edited_party_df['Excel Value'], edited_party_df['Tally Ledger']))
+
+                with m_col2:
+                    st.markdown("#### Particulars Mapping")
+                    unique_particulars = df['PARTICULARS'].dropna().unique()
+                    
+                    if st.button("Auto-Map Particulars with AI", use_container_width=True):
+                        with st.spinner("AI analyzing particulars..."):
+                            s_map, _, _ = get_smart_suggestions(unique_particulars, ledger_master, rules_config, "Suspense", learned_mappings)
+                            st.session_state.purchase_particulars_mappings.update(s_map)
+
+                    part_data = [{"Excel Value": p, "Tally Ledger": st.session_state.purchase_particulars_mappings.get(str(p), p)} for p in unique_particulars]
+                    edited_part_df = st.data_editor(
+                        pd.DataFrame(part_data),
+                        column_config={"Tally Ledger": st.column_config.SelectboxColumn("Tally Ledger", options=ledger_master, width="large")},
+                        hide_index=True,
+                        use_container_width=True,
+                        key="part_editor"
+                    )
+                    particulars_map_final = dict(zip(edited_part_df['Excel Value'], edited_part_df['Tally Ledger']))
+
+                st.markdown("#### Tax Configuration")
+                t_cols = st.columns(3)
+                with t_cols[0]:
+                    tax_map_final['SGST'] = st.selectbox("SGST Ledger", ledger_master, index=ledger_master.index(tax_map_final['SGST']) if tax_map_final['SGST'] in ledger_master else 0)
+                with t_cols[1]:
+                    tax_map_final['CGST'] = st.selectbox("CGST Ledger", ledger_master, index=ledger_master.index(tax_map_final['CGST']) if tax_map_final['CGST'] in ledger_master else 0)
+                with t_cols[2]:
+                    tax_map_final['IGST'] = st.selectbox("IGST Ledger", ledger_master, index=ledger_master.index(tax_map_final['IGST']) if tax_map_final['IGST'] in ledger_master else 0)
+
+            st.markdown("---")
+            st.markdown("### 🚀 Step 4: Generate & Push")
+            col_btn1, col_btn2 = st.columns(2)
+            
+            xml_data = create_purchase_tally_xml(
+                df, purchase_type, st.session_state.tally_company_name,
+                party_mappings=party_map_final,
+                particulars_mappings=particulars_map_final,
+                tax_mappings=tax_map_final
+            )
+            
+            with col_btn1:
+                st.download_button(
+                    "Download Tally XML",
+                    xml_data,
+                    f"purchase_{datetime.now().strftime('%Y%m%d')}.xml",
+                    "application/xml",
+                    use_container_width=True,
+                    type="primary"
+                )
+            
+            with col_btn2:
+                if st.button("Push Directly to Tally", use_container_width=True):
+                    if not st.session_state.tally_company_name:
+                        st.error("Please configure Tally Company Name in Settings.")
+                    else:
+                        with st.spinner("Pushing to Tally..."):
+                            success, message, count = push_vouchers_to_tally(
+                                xml_data,
+                                st.session_state.tally_server_host,
+                                st.session_state.tally_server_port
+                            )
+                            if success:
+                                st.success(message)
+                            else:
+                                st.error(message)
+
 def render_settings_page():
     """Enhanced settings page"""
     st.markdown("""
@@ -4743,6 +5058,10 @@ else:
             if st.button("Journal Automation", use_container_width=True, key="sidebar_journal"):
                 st.session_state.current_view = "journal_converter"
                 st.rerun()
+
+            if st.button("Purchase Entry", use_container_width=True, key="sidebar_purchase"):
+                st.session_state.current_view = "purchase_converter"
+                st.rerun()
                 
             if st.button("Settings", use_container_width=True, key="sidebar_settings"):
                 st.session_state.current_view = "settings"
@@ -4763,5 +5082,7 @@ else:
         render_bank_converter_page()
     elif st.session_state.current_view == "journal_converter":
         render_journal_converter_page()
+    elif st.session_state.current_view == "purchase_converter":
+        render_purchase_converter_page()
     elif st.session_state.current_view == "settings":
         render_settings_page()
